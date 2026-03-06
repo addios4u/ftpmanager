@@ -1,5 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import * as vscode from 'vscode';
 import { PassThrough, Readable } from 'stream';
 import { Client as BasicFtpClient, type FileInfo, enterPassiveModeIPv4, enterPassiveModeIPv6 } from 'basic-ftp';
 import type { FtpConnectionConfig, RemoteFileEntry } from '@ftpmanager/shared';
@@ -31,6 +32,14 @@ function mapFileInfo(info: FileInfo): RemoteFileEntry {
   };
 }
 
+let ftpOutputChannel: vscode.OutputChannel | undefined;
+function getFtpChannel(): vscode.OutputChannel {
+  if (!ftpOutputChannel) {
+    ftpOutputChannel = vscode.window.createOutputChannel('FTP Manager');
+  }
+  return ftpOutputChannel;
+}
+
 export class FtpClient implements IFtpClient {
   private client: BasicFtpClient;
 
@@ -40,10 +49,11 @@ export class FtpClient implements IFtpClient {
   ) {
     this.client = new BasicFtpClient();
     this.client.ftp.verbose = false;
+    this.client.ftp.log = (msg: string) => getFtpChannel().appendLine(msg);
   }
 
   async connect(signal?: AbortSignal): Promise<void> {
-    this.client.ftp.timeout = 15_000;
+    this.client.ftp.timeout = 8_000; // 8s per attempt: EPSV(8s)+PASV(8s)=16s < 25s global
     // Try EPSV first (uses control connection IP — no NAT/PASV IP issues),
     // fall back to standard PASV if server doesn't support EPSV.
     this.client.prepareTransfer = async (ftp) => {
