@@ -6,4 +6,5 @@ dist/
 *.js.map
 *.d.ts.map
 .omc/
+packages/extension/README.md
 

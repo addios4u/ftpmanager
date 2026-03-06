@@ -2,7 +2,7 @@
   "name": "ftpmanager",
   "displayName": "FTPManager",
   "description": "FTP/SFTP client for VS Code - connect, browse, edit and transfer files on remote servers",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "publisher": "addios4u",
   "license": "MIT",
   "repository": {
@@ -17,8 +17,17 @@
     "color": "#1a3a5c",
     "theme": "dark"
   },
-  "categories": ["Other"],
-  "keywords": ["ftp", "sftp", "ftps", "remote", "file transfer", "ssh"],
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "ftp",
+    "sftp",
+    "ftps",
+    "remote",
+    "file transfer",
+    "ssh"
+  ],
   "main": "./dist/extension.js",
   "l10n": "./l10n",
   "contributes": {
@@ -230,7 +239,7 @@
     "watch": "node esbuild.mjs --watch",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "prepackage": "pnpm run build",
+    "prepackage": "pnpm run build && cp ../../README.md ./README.md",
     "package": "vsce package --no-dependencies -o ../../out/",
     "publish:vsce": "vsce publish --no-dependencies",
     "publish:ovsx": "ovsx publish \"../../out/ftpmanager-$npm_package_version.vsix\"",
