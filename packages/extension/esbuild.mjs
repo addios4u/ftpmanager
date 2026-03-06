@@ -53,11 +53,13 @@ function copyNativeModules() {
     } catch { /* module not installed */ }
   }
 
-  // Build-time-only packages — not needed at runtime
+  // Build-time-only packages — not needed at runtime.
+  // NOTE: readable-stream, string_decoder, safe-buffer, inherits, util-deprecate
+  //       are intentionally NOT excluded: concat-stream (runtime dep of
+  //       ssh2-sftp-client) requires them at extension activation time.
   const buildTimeOnly = new Set([
     'prebuild-install', 'node-abi', 'napi-build-utils', 'detect-libc',
-    'tar-fs', 'tar-stream', 'pump', 'end-of-stream', 'bl', 'readable-stream',
-    'string_decoder', 'safe-buffer', 'inherits', 'util-deprecate', 'once', 'wrappy',
+    'tar-fs', 'tar-stream', 'pump', 'end-of-stream', 'bl', 'once', 'wrappy',
     'simple-get', 'simple-concat', 'decompress-response', 'mimic-response',
     'mkdirp-classic', 'fs-constants', 'chownr', 'tunnel-agent',
     'github-from-package', 'expand-template', 'ini', 'minimist', 'rc',
