@@ -1,0 +1,19 @@
+{
+  "viewName.servers": "FTP Manager",
+  "category.ftpManager": "FTP Manager",
+  "command.addServer": "Add Server",
+  "command.editServer": "Edit Server",
+  "command.deleteServer": "Delete Server",
+  "command.connect": "Connect",
+  "command.disconnect": "Disconnect",
+  "command.refresh": "Refresh",
+  "command.uploadFile": "Upload File",
+  "command.downloadFile": "Download",
+  "command.downloadFolder": "Download Folder",
+  "command.newFolder": "New Folder",
+  "command.rename": "Rename",
+  "command.deleteRemote": "Delete",
+  "command.copyRemotePath": "Copy Remote Path",
+  "command.uploadToServer": "Upload to FTP Server",
+  "command.openRemoteFile": "Open Remote File"
+}

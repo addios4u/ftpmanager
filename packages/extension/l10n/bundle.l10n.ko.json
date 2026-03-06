@@ -1,0 +1,22 @@
+{
+  "Connected": "연결됨",
+  "Connect": "연결",
+  "Disconnect": "연결 해제",
+  "Add Server": "서버 추가",
+  "Edit Server": "서버 편집",
+  "Delete Server": "서버 삭제",
+  "Delete server \"{0}\"?": "\"{0}\" 서버를 삭제할까요?",
+  "Delete": "삭제",
+  "Refresh": "새로고침",
+  "Failed to connect \"{0}\": {1}": "\"{0}\" 연결 실패: {1}",
+  "Failed to load directory: {0}": "디렉토리 로드 실패: {0}",
+  "Upload File": "파일 업로드",
+  "Download": "다운로드",
+  "New Folder": "새 폴더",
+  "Rename": "이름 변경",
+  "No active connection": "활성 연결 없음",
+  "Enter folder name": "폴더 이름 입력",
+  "Folder name": "폴더 이름",
+  "Enter new name": "새 이름 입력",
+  "New name": "새 이름"
+}

@@ -1,0 +1,23 @@
+{
+  "name": "ftpmanager-root",
+  "private": true,
+  "scripts": {
+    "build": "pnpm --filter @ftpmanager/shared build && pnpm --filter @ftpmanager/webview-ui build && pnpm --filter @ftpmanager/extension build",
+    "watch": "pnpm --filter @ftpmanager/extension watch",
+    "typecheck": "pnpm -r typecheck",
+    "package": "pnpm --filter @ftpmanager/extension package",
+    "publish": "pnpm --filter @ftpmanager/extension publish"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "ssh2",
+      "cpu-features",
+      "@vscode/vsce-sign",
+      "keytar"
+    ]
+  }
+}

@@ -1,0 +1,311 @@
+{
+  "version": "1.0.0",
+  "lastScanned": 1772771766783,
+  "projectRoot": "/Users/addios4u/git/ftpmanager",
+  "techStack": {
+    "languages": [],
+    "frameworks": [],
+    "packageManager": null,
+    "runtime": null
+  },
+  "build": {
+    "buildCommand": null,
+    "testCommand": null,
+    "lintCommand": null,
+    "devCommand": null,
+    "scripts": {}
+  },
+  "conventions": {
+    "namingStyle": null,
+    "importStyle": null,
+    "testPattern": null,
+    "fileOrganization": null
+  },
+  "structure": {
+    "isMonorepo": false,
+    "workspaces": [],
+    "mainDirectories": [],
+    "gitBranches": null
+  },
+  "customNotes": [],
+  "directoryMap": {},
+  "hotPaths": [
+    {
+      "path": "packages/extension/tsconfig.json",
+      "accessCount": 4,
+      "lastAccessed": 1772772926896,
+      "type": "file"
+    },
+    {
+      "path": "packages/extension/src/providers/ftp-fs-provider.ts",
+      "accessCount": 3,
+      "lastAccessed": 1772772940652,
+      "type": "file"
+    },
+    {
+      "path": "packages/extension/src/webview/panel-manager.ts",
+      "accessCount": 3,
+      "lastAccessed": 1772772955949,
+      "type": "file"
+    },
+    {
+      "path": "packages/extension/src/services/ftp-client.ts",
+      "accessCount": 3,
+      "lastAccessed": 1772772967836,
+      "type": "file"
+    },
+    {
+      "path": "packages/extension/src/services/sftp-client.ts",
+      "accessCount": 3,
+      "lastAccessed": 1772772975861,
+      "type": "file"
+    },
+    {
+      "path": "packages/extension/src/providers/ftp-tree.ts",
+      "accessCount": 3,
+      "lastAccessed": 1772772987384,
+      "type": "file"
+    },
+    {
+      "path": ".npmrc",
+      "accessCount": 2,
+      "lastAccessed": 1772772284151,
+      "type": "file"
+    },
+    {
+      "path": "package.json",
+      "accessCount": 2,
+      "lastAccessed": 1772772759737,
+      "type": "file"
+    },
+    {
+      "path": "",
+      "accessCount": 1,
+      "lastAccessed": 1772771932026,
+      "type": "directory"
+    },
+    {
+      "path": "pnpm-workspace.yaml",
+      "accessCount": 1,
+      "lastAccessed": 1772772284044,
+      "type": "file"
+    },
+    {
+      "path": ".nvmrc",
+      "accessCount": 1,
+      "lastAccessed": 1772772284259,
+      "type": "file"
+    },
+    {
+      "path": "tsconfig.base.json",
+      "accessCount": 1,
+      "lastAccessed": 1772772291262,
+      "type": "file"
+    },
+    {
+      "path": ".prettierrc",
+      "accessCount": 1,
+      "lastAccessed": 1772772293654,
+      "type": "file"
+    },
+    {
+      "path": ".eslintrc.json",
+      "accessCount": 1,
+      "lastAccessed": 1772772295019,
+      "type": "file"
+    },
+    {
+      "path": "packages/shared/package.json",
+      "accessCount": 1,
+      "lastAccessed": 1772772337035,
+      "type": "file"
+    },
+    {
+      "path": "packages/shared/tsconfig.json",
+      "accessCount": 1,
+      "lastAccessed": 1772772337666,
+      "type": "file"
+    },
+    {
+      "path": "packages/shared/src/types.ts",
+      "accessCount": 1,
+      "lastAccessed": 1772772342935,
+      "type": "file"
+    },
+    {
+      "path": "packages/shared/src/constants.ts",
+      "accessCount": 1,
+      "lastAccessed": 1772772347943,
+      "type": "file"
+    },
+    {
+      "path": "packages/shared/src/messages.ts",
+      "accessCount": 1,
+      "lastAccessed": 1772772351903,
+      "type": "file"
+    },
+    {
+      "path": "packages/shared/src/index.ts",
+      "accessCount": 1,
+      "lastAccessed": 1772772352262,
+      "type": "file"
+    },
+    {
+      "path": "packages/extension/package.json",
+      "accessCount": 1,
+      "lastAccessed": 1772772524019,
+      "type": "file"
+    },
+    {
+      "path": "packages/extension/package.nls.json",
+      "accessCount": 1,
+      "lastAccessed": 1772772529503,
+      "type": "file"
+    },
+    {
+      "path": "packages/extension/package.nls.ko.json",
+      "accessCount": 1,
+      "lastAccessed": 1772772531928,
+      "type": "file"
+    },
+    {
+      "path": "packages/extension/.vscodeignore",
+      "accessCount": 1,
+      "lastAccessed": 1772772537551,
+      "type": "file"
+    },
+    {
+      "path": "packages/extension/l10n/bundle.l10n.json",
+      "accessCount": 1,
+      "lastAccessed": 1772772542367,
+      "type": "file"
+    },
+    {
+      "path": "packages/extension/l10n/bundle.l10n.ko.json",
+      "accessCount": 1,
+      "lastAccessed": 1772772546334,
+      "type": "file"
+    },
+    {
+      "path": "packages/extension/resources/icons/ftp.svg",
+      "accessCount": 1,
+      "lastAccessed": 1772772549410,
+      "type": "file"
+    },
+    {
+      "path": "packages/extension/resources/icons/sftp.svg",
+      "accessCount": 1,
+      "lastAccessed": 1772772551506,
+      "type": "file"
+    },
+    {
+      "path": ".vscode/launch.json",
+      "accessCount": 1,
+      "lastAccessed": 1772772563420,
+      "type": "file"
+    },
+    {
+      "path": ".vscode/tasks.json",
+      "accessCount": 1,
+      "lastAccessed": 1772772565165,
+      "type": "file"
+    },
+    {
+      "path": "packages/webview-ui/package.json",
+      "accessCount": 1,
+      "lastAccessed": 1772772568846,
+      "type": "file"
+    },
+    {
+      "path": "packages/webview-ui/tsconfig.json",
+      "accessCount": 1,
+      "lastAccessed": 1772772570270,
+      "type": "file"
+    },
+    {
+      "path": "README.md",
+      "accessCount": 1,
+      "lastAccessed": 1772772572137,
+      "type": "file"
+    },
+    {
+      "path": "packages/webview-ui/vite.config.ts",
+      "accessCount": 1,
+      "lastAccessed": 1772772573465,
+      "type": "file"
+    },
+    {
+      "path": "packages/webview-ui/index.html",
+      "accessCount": 1,
+      "lastAccessed": 1772772574457,
+      "type": "file"
+    },
+    {
+      "path": "packages/webview-ui/src/vscode-api.ts",
+      "accessCount": 1,
+      "lastAccessed": 1772772576529,
+      "type": "file"
+    },
+    {
+      "path": "packages/webview-ui/src/index.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1772772577905,
+      "type": "file"
+    },
+    {
+      "path": "packages/webview-ui/src/App.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1772772580043,
+      "type": "file"
+    },
+    {
+      "path": "packages/webview-ui/src/hooks/useExtensionMessages.ts",
+      "accessCount": 1,
+      "lastAccessed": 1772772583809,
+      "type": "file"
+    },
+    {
+      "path": "packages/webview-ui/src/stores/connection.ts",
+      "accessCount": 1,
+      "lastAccessed": 1772772587246,
+      "type": "file"
+    },
+    {
+      "path": "packages/extension/src/extension.ts",
+      "accessCount": 1,
+      "lastAccessed": 1772772589738,
+      "type": "file"
+    },
+    {
+      "path": "packages/webview-ui/src/components/WelcomeView/index.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1772772591854,
+      "type": "file"
+    },
+    {
+      "path": "packages/webview-ui/src/components/ConnectionDialog/index.tsx",
+      "accessCount": 1,
+      "lastAccessed": 1772772608498,
+      "type": "file"
+    },
+    {
+      "path": "packages/webview-ui/src/components/ConnectionDialog/uuid.ts",
+      "accessCount": 1,
+      "lastAccessed": 1772772610180,
+      "type": "file"
+    },
+    {
+      "path": "packages/webview-ui/src/styles/global.css",
+      "accessCount": 1,
+      "lastAccessed": 1772772626004,
+      "type": "file"
+    },
+    {
+      "path": "packages/extension/src/services/connection-manager.ts",
+      "accessCount": 1,
+      "lastAccessed": 1772772629860,
+      "type": "file"
+    }
+  ],
+  "userDirectives": []
+}

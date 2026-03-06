@@ -1,0 +1,19 @@
+{
+  "viewName.servers": "FTP 관리자",
+  "category.ftpManager": "FTP 관리자",
+  "command.addServer": "서버 추가",
+  "command.editServer": "서버 편집",
+  "command.deleteServer": "서버 삭제",
+  "command.connect": "연결",
+  "command.disconnect": "연결 해제",
+  "command.refresh": "새로고침",
+  "command.uploadFile": "파일 업로드",
+  "command.downloadFile": "다운로드",
+  "command.downloadFolder": "폴더 다운로드",
+  "command.newFolder": "새 폴더",
+  "command.rename": "이름 변경",
+  "command.deleteRemote": "삭제",
+  "command.copyRemotePath": "원격 경로 복사",
+  "command.uploadToServer": "FTP 서버에 업로드",
+  "command.openRemoteFile": "원격 파일 열기"
+}
