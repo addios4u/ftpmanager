@@ -1,0 +1,92 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <defs>
+    <!-- Background gradient -->
+    <linearGradient id="bg" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0%" stop-color="#4DA6FF"/>
+      <stop offset="100%" stop-color="#1565C0"/>
+    </linearGradient>
+
+    <!-- Subtle inner shadow -->
+    <filter id="innerGlow">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="3" result="blur"/>
+      <feOffset dx="0" dy="2" result="offsetBlur"/>
+      <feComposite in="SourceGraphic" in2="offsetBlur" operator="over"/>
+    </filter>
+
+    <!-- Drop shadow for elements -->
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="115%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#0D47A1" flood-opacity="0.35"/>
+    </filter>
+
+    <!-- Lighter shadow for arrows -->
+    <filter id="arrowShadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="1" stdDeviation="1.5" flood-color="#0D47A1" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+
+  <!-- Background rounded rectangle -->
+  <rect x="0" y="0" width="256" height="256" rx="48" ry="48" fill="url(#bg)"/>
+
+  <!-- Subtle highlight on top -->
+  <rect x="0" y="0" width="256" height="128" rx="48" ry="48" fill="white" opacity="0.06"/>
+
+  <!-- Server/Cloud shape - top area -->
+  <g filter="url(#shadow)" opacity="0.95">
+    <!-- Server box -->
+    <rect x="60" y="36" width="136" height="50" rx="12" ry="12" fill="white"/>
+    <!-- Server lines -->
+    <circle cx="88" cy="54" r="5" fill="#1565C0"/>
+    <rect x="102" y="50" width="72" height="8" rx="4" fill="#B3D4FC"/>
+    <circle cx="88" cy="70" r="3.5" fill="#90CAF9"/>
+    <rect x="102" y="66.5" width="50" height="7" rx="3.5" fill="#E3F2FD"/>
+  </g>
+
+  <!-- Transfer arrows in the middle -->
+  <g filter="url(#arrowShadow)">
+    <!-- Down arrow -->
+    <g fill="white" opacity="0.95">
+      <rect x="100" y="94" width="8" height="30" rx="4"/>
+      <polygon points="104,130 90,118 118,118"/>
+    </g>
+
+    <!-- Up arrow -->
+    <g fill="white" opacity="0.7">
+      <rect x="148" y="100" width="8" height="30" rx="4"/>
+      <polygon points="152,94 138,106 166,106"/>
+    </g>
+  </g>
+
+  <!-- Folder shape - bottom area -->
+  <g filter="url(#shadow)" opacity="0.95">
+    <!-- Folder: single unified path (tab + body) -->
+    <path d="
+      M72,138
+      L104,138
+      Q108,138 110,142
+      L114,148
+      L184,148
+      Q196,148 196,160
+      L196,194
+      Q196,206 184,206
+      L72,206
+      Q60,206 60,194
+      L60,150
+      Q60,138 72,138
+      Z
+    " fill="white"/>
+    <!-- Folder tab accent line -->
+    <path d="
+      M60,156 L196,156
+    " stroke="#E3F2FD" stroke-width="2" fill="none"/>
+    <!-- Folder inner detail -->
+    <rect x="76" y="168" width="60" height="7" rx="3.5" fill="#B3D4FC"/>
+    <rect x="76" y="182" width="40" height="7" rx="3.5" fill="#E3F2FD"/>
+  </g>
+
+  <!-- "FTP" badge - bottom right -->
+  <g>
+    <rect x="154" y="168" width="48" height="26" rx="6" ry="6" fill="#1565C0"/>
+    <text x="178" y="186.5" font-family="system-ui, -apple-system, 'SF Pro Text', 'Helvetica Neue', Arial, sans-serif"
+          font-size="16" font-weight="700" fill="white" text-anchor="middle" letter-spacing="1">FTP</text>
+  </g>
+</svg>
