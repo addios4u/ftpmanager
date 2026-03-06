@@ -36,9 +36,10 @@ function getIcon(
 ): vscode.ThemeIcon | { light: vscode.Uri; dark: vscode.Uri } {
   if (node.nodeType === 'server') {
     const protocol = connectionManager.getConnection(node.connectionId)?.protocol ?? 'ftp';
-    const iconFile = protocol === 'sftp' ? 'sftp.svg' : 'ftp.svg';
-    const iconUri = vscode.Uri.joinPath(extensionUri, 'resources', 'icons', iconFile);
-    return { light: iconUri, dark: iconUri };
+    const baseName = protocol === 'sftp' ? 'sftp' : 'ftp';
+    const light = vscode.Uri.joinPath(extensionUri, 'resources', 'icons', `${baseName}-light.svg`);
+    const dark = vscode.Uri.joinPath(extensionUri, 'resources', 'icons', `${baseName}-dark.svg`);
+    return { light, dark };
   }
   if (node.nodeType === 'directory') return new vscode.ThemeIcon('folder');
   return new vscode.ThemeIcon('file');
