@@ -1,7 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { PassThrough, Readable } from 'stream';
-import { Client as BasicFtpClient, type FileInfo } from 'basic-ftp';
+import { Client as BasicFtpClient, type FileInfo, enterPassiveModeIPv4, enterPassiveModeIPv6 } from 'basic-ftp';
 import type { FtpConnectionConfig, RemoteFileEntry } from '@ftpmanager/shared';
 
 export interface IFtpClient {
@@ -44,6 +44,15 @@ export class FtpClient implements IFtpClient {
 
   async connect(signal?: AbortSignal): Promise<void> {
     this.client.ftp.timeout = 15_000;
+    // Try EPSV first (uses control connection IP — no NAT/PASV IP issues),
+    // fall back to standard PASV if server doesn't support EPSV.
+    this.client.prepareTransfer = async (ftp) => {
+      try {
+        return await enterPassiveModeIPv6(ftp);
+      } catch {
+        return await enterPassiveModeIPv4(ftp);
+      }
+    };
     const accessPromise = this.client.access({
       host: this.config.host,
       port: this.config.port,

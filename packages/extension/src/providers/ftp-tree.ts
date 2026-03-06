@@ -256,22 +256,27 @@ export class FtpTreeProvider
     try {
       const entries = await withTimeout(client.list(remotePath), 20_000);
       return this.mapEntries(entries, connectionId, remotePath);
-    } catch {
-      if (remotePath === '/') return [];
-
-      // Configured path failed — try root as fallback
-      try {
-        const rootEntries = await withTimeout(client.list('/'), 20_000);
-        vscode.window.showWarningMessage(
-          vscode.l10n.t('Path "{0}" is unavailable for {1}. Showing root directory.', remotePath, serverName),
-        );
-        return this.mapEntries(rootEntries, connectionId, '/');
-      } catch (rootErr) {
-        vscode.window.showErrorMessage(
-          vscode.l10n.t('Failed to load directory: {0}', rootErr instanceof Error ? rootErr.message : String(rootErr)),
-        );
-        return [];
+    } catch (err) {
+      if (remotePath !== '/') {
+        // Configured path failed — try root as fallback
+        try {
+          const rootEntries = await withTimeout(client.list('/'), 20_000);
+          vscode.window.showWarningMessage(
+            vscode.l10n.t('Path "{0}" is unavailable for {1}. Showing root directory.', remotePath, serverName),
+          );
+          return this.mapEntries(rootEntries, connectionId, '/');
+        } catch (rootErr) {
+          vscode.window.showErrorMessage(
+            vscode.l10n.t('Failed to load directory: {0}', rootErr instanceof Error ? rootErr.message : String(rootErr)),
+          );
+          return [];
+        }
       }
+      // Root path failed — show error so user knows something went wrong
+      vscode.window.showErrorMessage(
+        vscode.l10n.t('Failed to load directory: {0}', err instanceof Error ? err.message : String(err)),
+      );
+      return [];
     }
   }
 
