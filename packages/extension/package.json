@@ -1,5 +1,5 @@
 {
-  "name": "@ftpmanager/extension",
+  "name": "ftpmanager",
   "displayName": "FTPManager",
   "description": "FTP/SFTP client for VS Code - connect, browse, edit and transfer files on remote servers",
   "version": "1.0.0",

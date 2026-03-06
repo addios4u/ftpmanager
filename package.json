@@ -2,11 +2,11 @@
   "name": "ftpmanager-root",
   "private": true,
   "scripts": {
-    "build": "pnpm --filter @ftpmanager/shared build && pnpm --filter @ftpmanager/webview-ui build && pnpm --filter @ftpmanager/extension build",
-    "watch": "pnpm --filter @ftpmanager/extension watch",
+    "build": "pnpm --filter @ftpmanager/shared build && pnpm --filter @ftpmanager/webview-ui build && pnpm --filter ftpmanager build",
+    "watch": "pnpm --filter ftpmanager watch",
     "typecheck": "pnpm -r typecheck",
-    "package": "pnpm --filter @ftpmanager/extension package",
-    "publish": "pnpm --filter @ftpmanager/extension publish"
+    "package": "pnpm --filter ftpmanager package",
+    "publish": "pnpm --filter ftpmanager publish"
   },
   "devDependencies": {
     "typescript": "^5.7.2"
