@@ -1,6 +1,5 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
-import * as fs from 'fs';
 import type { ConnectionManager } from '../services/connection-manager.js';
 
 /**
@@ -11,8 +10,6 @@ import type { ConnectionManager } from '../services/connection-manager.js';
 export class FtpFileSystemProvider implements vscode.FileSystemProvider {
   private readonly _onDidChangeFile = new vscode.EventEmitter<vscode.FileChangeEvent[]>();
   readonly onDidChangeFile = this._onDidChangeFile.event;
-
-  private readonly cache = new Map<string, string>();
 
   constructor(private readonly connectionManager: ConnectionManager) {}
 
@@ -51,10 +48,12 @@ export class FtpFileSystemProvider implements vscode.FileSystemProvider {
     if (!client) throw vscode.FileSystemError.Unavailable(uri);
 
     const entries = await client.list(remotePath);
-    return entries.map((e) => [
-      e.name,
-      e.type === 'directory' ? vscode.FileType.Directory : vscode.FileType.File,
-    ]);
+    return entries
+      .filter((e) => e.name !== '.' && e.name !== '..')
+      .map((e) => [
+        e.name,
+        e.type === 'directory' ? vscode.FileType.Directory : vscode.FileType.File,
+      ]);
   }
 
   async readFile(uri: vscode.Uri): Promise<Uint8Array> {
@@ -123,10 +122,6 @@ export class FtpFileSystemProvider implements vscode.FileSystemProvider {
   }
 
   dispose(): void {
-    for (const [, tmpPath] of this.cache) {
-      try { fs.unlinkSync(tmpPath); } catch { /* ignore */ }
-    }
-    this.cache.clear();
     this._onDidChangeFile.dispose();
   }
 }

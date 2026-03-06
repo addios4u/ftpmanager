@@ -94,7 +94,12 @@ export class FtpTreeProvider
 
     if (target) {
       const targetIdx = remaining.indexOf(target.connectionId);
-      remaining.splice(targetIdx, 0, ...draggedIds);
+      if (targetIdx === -1) {
+        // target was itself dragged — append at end
+        remaining.push(...draggedIds);
+      } else {
+        remaining.splice(targetIdx, 0, ...draggedIds);
+      }
     } else {
       remaining.push(...draggedIds);
     }

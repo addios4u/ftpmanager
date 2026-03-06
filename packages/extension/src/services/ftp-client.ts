@@ -1,5 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import { PassThrough, Readable } from 'stream';
 import { Client as BasicFtpClient, type FileInfo } from 'basic-ftp';
 import type { FtpConnectionConfig, RemoteFileEntry } from '@ftpmanager/shared';
 
@@ -80,7 +81,6 @@ export class FtpClient implements IFtpClient {
 
   async mkdir(remotePath: string): Promise<void> {
     await this.client.ensureDir(remotePath);
-    await this.client.cd('/');
   }
 
   async delete(remotePath: string): Promise<void> {
@@ -96,7 +96,6 @@ export class FtpClient implements IFtpClient {
   }
 
   async getContent(remotePath: string): Promise<Buffer> {
-    const { PassThrough } = await import('stream');
     const chunks: Buffer[] = [];
     const pt = new PassThrough();
     pt.on('data', (chunk: Buffer) => chunks.push(chunk));
@@ -105,7 +104,6 @@ export class FtpClient implements IFtpClient {
   }
 
   async putContent(content: Buffer, remotePath: string): Promise<void> {
-    const { Readable } = await import('stream');
     const readable = Readable.from(content);
     await this.client.uploadFrom(readable as unknown as fs.ReadStream, remotePath);
   }

@@ -228,10 +228,10 @@ describe('FtpClient', () => {
       expect(mockFtpClient.ensureDir).toHaveBeenCalledWith('/remote/newdir');
     });
 
-    it('should call client.cd with / after ensureDir (BUG-009: side effect)', async () => {
+    it('should NOT call cd() after ensureDir (BUG-009 fixed: no side effect)', async () => {
       const client = new FtpClient(makeConfig());
       await client.mkdir('/remote/newdir');
-      expect(mockFtpClient.cd).toHaveBeenCalledWith('/');
+      expect(mockFtpClient.cd).not.toHaveBeenCalled();
     });
   });
 

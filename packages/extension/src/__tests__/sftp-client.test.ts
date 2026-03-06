@@ -244,9 +244,15 @@ describe('SftpClient', () => {
 
   // ── rmdir() ────────────────────────────────────────────────────────────────
   describe('rmdir()', () => {
-    it('should call client.rmdir with remotePath and true (ignores recursive param)', async () => {
+    it('should pass recursive param to client.rmdir (BUG-010 fixed)', async () => {
       const client = new SftpClient(makeConfig());
       await client.rmdir('/remote/dir', false);
+      expect(mockSftpClient.rmdir).toHaveBeenCalledWith('/remote/dir', false);
+    });
+
+    it('should pass recursive=true when recursive is true', async () => {
+      const client = new SftpClient(makeConfig());
+      await client.rmdir('/remote/dir', true);
       expect(mockSftpClient.rmdir).toHaveBeenCalledWith('/remote/dir', true);
     });
   });

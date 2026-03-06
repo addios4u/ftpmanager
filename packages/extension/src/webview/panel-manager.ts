@@ -7,6 +7,7 @@ import { SftpClient } from '../services/sftp-client.js';
 
 export class WebviewPanelManager {
   private panel: vscode.WebviewPanel | undefined;
+  private pendingEditId: string | undefined;
 
   constructor(
     private readonly context: vscode.ExtensionContext,
@@ -39,6 +40,7 @@ export class WebviewPanelManager {
       },
     );
 
+    this.pendingEditId = editId;
     this.panel.webview.html = this.getWebviewHtml(this.panel.webview);
 
     this.panel.webview.onDidReceiveMessage(
@@ -51,17 +53,8 @@ export class WebviewPanelManager {
 
     this.panel.onDidDispose(() => {
       this.panel = undefined;
+      this.pendingEditId = undefined;
     });
-
-    setTimeout(() => {
-      this.panel?.webview.postMessage({
-        type: 'stateSync',
-        connections: this.connectionManager.getConnectionInfos(),
-      });
-      if (editId) {
-        this.panel?.webview.postMessage({ type: 'openEdit', editId });
-      }
-    }, 300);
   }
 
   private async handleMessage(msg: WebviewMessage): Promise<void> {
@@ -71,6 +64,10 @@ export class WebviewPanelManager {
           type: 'stateSync',
           connections: this.connectionManager.getConnectionInfos(),
         });
+        if (this.pendingEditId) {
+          this.panel?.webview.postMessage({ type: 'openEdit', editId: this.pendingEditId });
+          this.pendingEditId = undefined;
+        }
         break;
       }
 

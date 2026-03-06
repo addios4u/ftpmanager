@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import * as path from 'path';
 import { ConnectionManager } from './services/connection-manager.js';
 import { FtpTreeProvider } from './providers/ftp-tree.js';
 import { WebviewPanelManager } from './webview/panel-manager.js';
@@ -101,7 +102,7 @@ export function activate(context: vscode.ExtensionContext): void {
         },
         async (progress) => {
           for (const file of files) {
-            const fileName = file.fsPath.split('/').pop() ?? file.fsPath;
+            const fileName = path.basename(file.fsPath);
             progress.report({ message: fileName });
             const remoteDest = n.remotePath.endsWith('/')
               ? n.remotePath + fileName
@@ -271,7 +272,7 @@ export function activate(context: vscode.ExtensionContext): void {
       const client = connectionManager.getClient(targetId);
       if (!client) return;
 
-      const fileName = uri.fsPath.split('/').pop() ?? uri.fsPath;
+      const fileName = path.basename(uri.fsPath);
       const remoteDest = server.remotePath.endsWith('/')
         ? server.remotePath + fileName
         : server.remotePath + '/' + fileName;

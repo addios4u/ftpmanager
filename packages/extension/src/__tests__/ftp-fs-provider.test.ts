@@ -355,13 +355,9 @@ describe('FtpFileSystemProvider', () => {
     });
 
     /**
-     * BUG-011: readDirectory() does not filter out '.' and '..' entries.
-     * The current implementation maps all entries from client.list() without
-     * filtering, so '.' and '..' appear in the output.
-     * This test documents the current (broken) behavior — it expects the
-     * dot-entries to be present. Update the test to expect them absent once fixed.
+     * BUG-011 Fix: readDirectory() now filters out '.' and '..' entries.
      */
-    it('does not filter "." and ".." entries (BUG-011: currently broken)', async () => {
+    it('filters out "." and ".." entries (BUG-011 fixed)', async () => {
       const entries: RemoteFileEntry[] = [
         makeEntry({ name: '.', type: 'directory' }),
         makeEntry({ name: '..', type: 'directory' }),
@@ -372,11 +368,10 @@ describe('FtpFileSystemProvider', () => {
       const provider = new FtpFileSystemProvider(mgr);
 
       const result = await provider.readDirectory(makeUri('conn1', '/'));
-      // Expected correct behavior: result should NOT contain '.' or '..'
-      // Current behavior: '.' and '..' are included because there is no filter.
       const names = result.map(([name]) => name);
-      expect(names).toContain('.');
-      expect(names).toContain('..');
+      expect(names).not.toContain('.');
+      expect(names).not.toContain('..');
+      expect(names).toContain('index.php');
     });
 
     it('throws Unavailable when no client', async () => {

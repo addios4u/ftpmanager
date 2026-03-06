@@ -74,8 +74,8 @@ export class SftpClient implements IFtpClient {
     await this.client.delete(remotePath);
   }
 
-  async rmdir(remotePath: string, _recursive: boolean): Promise<void> {
-    await this.client.rmdir(remotePath, true);
+  async rmdir(remotePath: string, recursive: boolean): Promise<void> {
+    await this.client.rmdir(remotePath, recursive);
   }
 
   async rename(oldPath: string, newPath: string): Promise<void> {
