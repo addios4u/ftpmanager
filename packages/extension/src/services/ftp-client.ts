@@ -2,7 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { PassThrough, Readable } from 'stream';
-import { Client as BasicFtpClient, type FileInfo, enterPassiveModeIPv4, enterPassiveModeIPv6 } from 'basic-ftp';
+import { Client as BasicFtpClient, type FileInfo, enterPassiveModeIPv4 } from 'basic-ftp';
 import type { FtpConnectionConfig, RemoteFileEntry } from '@ftpmanager/shared';
 
 export interface IFtpClient {
@@ -48,21 +48,16 @@ export class FtpClient implements IFtpClient {
     private readonly password?: string,
   ) {
     this.client = new BasicFtpClient();
-    this.client.ftp.verbose = false;
-    this.client.ftp.log = (msg: string) => getFtpChannel().appendLine(msg);
+    this.client.ftp.verbose = true;
+    this.client.ftp.log = (msg: string) => console.log('[FTP]', msg);
   }
 
   async connect(signal?: AbortSignal): Promise<void> {
     this.client.ftp.timeout = 8_000; // 8s per attempt: EPSV(8s)+PASV(8s)=16s < 25s global
-    // Try EPSV first (uses control connection IP — no NAT/PASV IP issues),
-    // fall back to standard PASV if server doesn't support EPSV.
-    this.client.prepareTransfer = async (ftp) => {
-      try {
-        return await enterPassiveModeIPv6(ftp);
-      } catch {
-        return await enterPassiveModeIPv4(ftp);
-      }
-    };
+    // Use PASV directly (EPSV wasted 8s before falling back, causing server
+    // to time out the already-allocated data port). Force IPv4 family.
+    this.client.ftp.ipFamily = 4;
+    this.client.prepareTransfer = (ftp) => enterPassiveModeIPv4(ftp);
     const accessPromise = this.client.access({
       host: this.config.host,
       port: this.config.port,
