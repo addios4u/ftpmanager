@@ -6,7 +6,9 @@
     "watch": "pnpm --filter ftpmanager watch",
     "typecheck": "pnpm -r typecheck",
     "package": "pnpm --filter ftpmanager package",
-    "publish": "pnpm --filter ftpmanager publish"
+    "publish:vsce": "pnpm --filter ftpmanager publish:vsce",
+    "publish:ovsx": "pnpm --filter ftpmanager publish:ovsx",
+    "publish:all": "pnpm --filter ftpmanager publish:all"
   },
   "devDependencies": {
     "typescript": "^5.7.2"

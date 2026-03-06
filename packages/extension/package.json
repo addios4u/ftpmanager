@@ -231,7 +231,10 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "prepackage": "pnpm run build",
-    "package": "vsce package --no-dependencies -o ../../out/ftpmanager.vsix",
+    "package": "vsce package --no-dependencies -o ../../out/",
+    "publish:vsce": "vsce publish --no-dependencies",
+    "publish:ovsx": "ovsx publish \"../../out/ftpmanager-$npm_package_version.vsix\"",
+    "publish:all": "pnpm run publish:vsce && pnpm run publish:ovsx",
     "vscode:prepublish": "pnpm run build"
   },
   "dependencies": {
@@ -244,6 +247,7 @@
     "@types/ssh2-sftp-client": "^9.0.4",
     "@types/vscode": "^1.95.0",
     "@vscode/vsce": "^3.3.2",
+    "ovsx": "^0.9.0",
     "esbuild": "^0.24.0",
     "typescript": "^5.7.2",
     "vitest": "^2.0.0"
