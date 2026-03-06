@@ -53,7 +53,7 @@ export class FtpClient implements IFtpClient {
   }
 
   async connect(signal?: AbortSignal): Promise<void> {
-    this.client.ftp.timeout = 8_000; // 8s per attempt: EPSV(8s)+PASV(8s)=16s < 25s global
+    this.client.ftp.timeout = 30_000; // 30s data connection timeout
     // Use PASV directly (EPSV wasted 8s before falling back, causing server
     // to time out the already-allocated data port). Force IPv4 family.
     this.client.ftp.ipFamily = 4;

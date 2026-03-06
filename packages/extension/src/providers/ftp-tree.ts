@@ -254,13 +254,13 @@ export class FtpTreeProvider
     if (!client) return [];
 
     try {
-      const entries = await withTimeout(client.list(remotePath), 25_000);
+      const entries = await withTimeout(client.list(remotePath), 35_000);
       return this.mapEntries(entries, connectionId, remotePath);
     } catch (err) {
       if (remotePath !== '/') {
         // Configured path failed — try root as fallback
         try {
-          const rootEntries = await withTimeout(client.list('/'), 25_000);
+          const rootEntries = await withTimeout(client.list('/'), 35_000);
           vscode.window.showWarningMessage(
             vscode.l10n.t('Path "{0}" is unavailable for {1}. Showing root directory.', remotePath, serverName),
           );
@@ -308,7 +308,7 @@ export class FtpTreeProvider
     if (!client) return [];
 
     try {
-      const entries = await withTimeout(client.list(remotePath), 25_000);
+      const entries = await withTimeout(client.list(remotePath), 35_000);
       return this.mapEntries(entries, connectionId, remotePath);
     } catch (err) {
       vscode.window.showErrorMessage(
