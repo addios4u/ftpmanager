@@ -11,6 +11,7 @@
   "command.downloadFile": "다운로드",
   "command.downloadFolder": "폴더 다운로드",
   "command.newFolder": "새 폴더",
+  "command.newFile": "새 파일",
   "command.rename": "이름 변경",
   "command.deleteRemote": "삭제",
   "command.copyRemotePath": "원격 경로 복사",

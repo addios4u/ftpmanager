@@ -101,6 +101,9 @@ export class SftpClient implements IFtpClient {
   async getContent(remotePath: string): Promise<Buffer> {
     const data = await this.client.get(remotePath);
     if (Buffer.isBuffer(data)) return data;
+    // concat-stream returns Array when no data is written (empty file)
+    if (Array.isArray(data)) return Buffer.concat(data as Buffer[]);
+    // Fallback: treat as readable stream
     const chunks: Buffer[] = [];
     await new Promise<void>((resolve, reject) => {
       const stream = data as unknown as NodeJS.ReadableStream;

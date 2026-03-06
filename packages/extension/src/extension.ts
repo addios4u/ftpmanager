@@ -32,6 +32,24 @@ async function pickServer(
   return picked?.id;
 }
 
+async function closeConnectionTabs(connectionId: string): Promise<void> {
+  const tabsToClose: vscode.Tab[] = [];
+  for (const tabGroup of vscode.window.tabGroups.all) {
+    for (const tab of tabGroup.tabs) {
+      if (
+        tab.input instanceof vscode.TabInputText &&
+        tab.input.uri.scheme === 'ftpmanager' &&
+        tab.input.uri.authority === connectionId
+      ) {
+        tabsToClose.push(tab);
+      }
+    }
+  }
+  if (tabsToClose.length > 0) {
+    await vscode.window.tabGroups.close(tabsToClose);
+  }
+}
+
 export function activate(context: vscode.ExtensionContext): void {
   connectionManager = new ConnectionManager(context);
   treeProvider = new FtpTreeProvider(connectionManager, context.extensionUri);
@@ -101,6 +119,7 @@ export function activate(context: vscode.ExtensionContext): void {
       if (!id) return;
       await connectionManager.disconnect(id);
       treeProvider.refresh(node as Parameters<typeof treeProvider.refresh>[0]);
+      await closeConnectionTabs(id);
     }),
 
     vscode.commands.registerCommand(COMMAND_IDS.REFRESH, (node?: unknown) => {
@@ -231,6 +250,33 @@ export function activate(context: vscode.ExtensionContext): void {
         : n.remotePath + '/' + name;
       await client.mkdir(newPath);
       treeProvider.refresh(node as Parameters<typeof treeProvider.refresh>[0]);
+    }),
+
+    vscode.commands.registerCommand(COMMAND_IDS.NEW_FILE, async (node) => {
+      const n = node as { connectionId: string; remotePath: string };
+      const name = await vscode.window.showInputBox({
+        title: vscode.l10n.t('New File'),
+        prompt: vscode.l10n.t('Enter file name'),
+        placeHolder: vscode.l10n.t('File name'),
+        ignoreFocusOut: true,
+        validateInput: (v) => (v.trim() ? null : 'Name is required'),
+      });
+      if (!name) return;
+
+      const client = connectionManager.getClient(n.connectionId);
+      if (!client) {
+        vscode.window.showErrorMessage(vscode.l10n.t('No active connection'));
+        return;
+      }
+
+      const newPath = n.remotePath.endsWith('/')
+        ? n.remotePath + name
+        : n.remotePath + '/' + name;
+      await client.putContent(Buffer.alloc(0), newPath);
+      treeProvider.refresh(node as Parameters<typeof treeProvider.refresh>[0]);
+
+      const uri = vscode.Uri.parse(`ftpmanager://${n.connectionId}${newPath}`);
+      await vscode.commands.executeCommand('vscode.open', uri);
     }),
 
     vscode.commands.registerCommand(COMMAND_IDS.RENAME, async (node) => {

@@ -17,6 +17,7 @@ const emptyConfig = (): FtpConnectionConfig => ({
   port: 21,
   username: '',
   remotePath: '',
+  passiveMode: true,
 });
 
 export function ConnectionDialog({ editId }: Props) {
@@ -141,6 +142,29 @@ export function ConnectionDialog({ editId }: Props) {
             placeholder="/public_html  (empty = home directory)"
           />
         </div>
+
+        {(config.protocol === 'ftp' || config.protocol === 'ftps') && (
+          <div className="form-group">
+            <label>Data Transfer Mode</label>
+            <div className="protocol-selector">
+              <button
+                className={`protocol-btn ${config.passiveMode !== false ? 'active' : ''}`}
+                onClick={() => setConfig((c) => ({ ...c, passiveMode: true }))}
+              >
+                PASV (Passive)
+              </button>
+              <button
+                className={`protocol-btn ${config.passiveMode === false ? 'active' : ''}`}
+                onClick={() => setConfig((c) => ({ ...c, passiveMode: false }))}
+              >
+                EPSV (Extended Passive)
+              </button>
+            </div>
+            <small style={{ opacity: 0.7 }}>
+              PASV: most compatible. EPSV: try if PASV fails or file listing hangs.
+            </small>
+          </div>
+        )}
 
         {config.protocol === 'sftp' && (
           <div className="sftp-section">

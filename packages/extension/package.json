@@ -90,6 +90,12 @@
         "category": "%category.ftpManager%"
       },
       {
+        "command": "ftpmanager.newFile",
+        "title": "%command.newFile%",
+        "icon": "$(new-file)",
+        "category": "%category.ftpManager%"
+      },
+      {
         "command": "ftpmanager.rename",
         "title": "%command.rename%",
         "category": "%category.ftpManager%"
@@ -179,6 +185,11 @@
           "command": "ftpmanager.newFolder",
           "when": "view == ftpmanager.servers && viewItem =~ /server-connected|directory/",
           "group": "2_transfer@3"
+        },
+        {
+          "command": "ftpmanager.newFile",
+          "when": "view == ftpmanager.servers && viewItem =~ /server-connected|directory/",
+          "group": "2_transfer@4"
         },
         {
           "command": "ftpmanager.downloadFile",

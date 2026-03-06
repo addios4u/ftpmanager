@@ -1,8 +1,10 @@
 import * as fs from 'fs';
+import * as net from 'net';
 import * as path from 'path';
+import * as tls from 'tls';
 import * as vscode from 'vscode';
 import { PassThrough, Readable } from 'stream';
-import { Client as BasicFtpClient, type FileInfo, enterPassiveModeIPv4 } from 'basic-ftp';
+import { Client as BasicFtpClient, type FileInfo, type FTPContext, enterPassiveModeIPv6 } from 'basic-ftp';
 import type { FtpConnectionConfig, RemoteFileEntry } from '@ftpmanager/shared';
 
 export interface IFtpClient {
@@ -40,8 +42,66 @@ function getFtpChannel(): vscode.OutputChannel {
   return ftpOutputChannel;
 }
 
+function isPrivateOrLocalIP(ip: string): boolean {
+  return (
+    ip === '0.0.0.0' ||
+    ip === '127.0.0.1' ||
+    /^10\./.test(ip) ||
+    /^172\.(1[6-9]|2\d|3[01])\./.test(ip) ||
+    /^192\.168\./.test(ip)
+  );
+}
+
+/**
+ * NAT-safe PASV handler.
+ * basic-ftp's built-in enterPassiveModeIPv4 blindly uses whatever IP the server
+ * reports, which breaks when the server is behind NAT and reports its LAN IP.
+ * This version substitutes the control connection's remote host in that case.
+ */
+async function enterPassiveModeNatSafe(ftp: FTPContext): Promise<{ code: number; message: string }> {
+  const res = await ftp.request('PASV');
+  const match = /(\d+),(\d+),(\d+),(\d+),(\d+),(\d+)/.exec(res.message);
+  if (!match) {
+    throw new Error(`Cannot parse PASV response: ${res.message}`);
+  }
+  const [, a, b, c, d, p1, p2] = match;
+  const pasvHost = `${a}.${b}.${c}.${d}`;
+  const port = (Number(p1) << 8) | Number(p2);
+
+  // If server returned a private/zero IP (NAT or misconfigured server),
+  // fall back to the control socket's remote address.
+  const controlHost = (ftp.socket.remoteAddress as string | undefined)
+    ?.replace('::ffff:', '') ?? pasvHost;
+  const host = isPrivateOrLocalIP(pasvHost) ? controlHost : pasvHost;
+
+  getFtpChannel().appendLine(
+    `[FTP] PASV: server=${pasvHost}:${port}, using=${host}:${port}` +
+    (isPrivateOrLocalIP(pasvHost) ? ' (NAT corrected)' : ''),
+  );
+
+  const rawSocket: net.Socket = await new Promise((resolve, reject) => {
+    const s = net.createConnection({ host, port }, () => resolve(s));
+    s.once('error', reject);
+  });
+
+  // For FTPS, wrap the data socket in TLS using the same context as the control socket
+  if (ftp.socket instanceof tls.TLSSocket) {
+    const secureContext = (ftp.socket as tls.TLSSocket & { context?: tls.SecureContext }).context;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (ftp as any).dataSocket = secureContext
+      ? tls.connect({ socket: rawSocket, secureContext })
+      : rawSocket;
+  } else {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (ftp as any).dataSocket = rawSocket;
+  }
+
+  return res;
+}
+
 export class FtpClient implements IFtpClient {
   private client: BasicFtpClient;
+  private _lock: Promise<void> = Promise.resolve();
 
   constructor(
     private readonly config: FtpConnectionConfig,
@@ -49,15 +109,33 @@ export class FtpClient implements IFtpClient {
   ) {
     this.client = new BasicFtpClient();
     this.client.ftp.verbose = true;
-    this.client.ftp.log = (msg: string) => console.log('[FTP]', msg);
+    this.client.ftp.log = (msg: string) => getFtpChannel().appendLine(`[FTP] ${msg}`);
+  }
+
+  private async withLock<T>(fn: () => Promise<T>): Promise<T> {
+    const current = this._lock;
+    let release!: () => void;
+    this._lock = new Promise<void>((resolve) => { release = resolve; });
+    await current;
+    try {
+      return await fn();
+    } finally {
+      release();
+    }
   }
 
   async connect(signal?: AbortSignal): Promise<void> {
     this.client.ftp.timeout = 30_000; // 30s data connection timeout
-    // Use PASV directly (EPSV wasted 8s before falling back, causing server
-    // to time out the already-allocated data port). Force IPv4 family.
-    this.client.ftp.ipFamily = 4;
-    this.client.prepareTransfer = (ftp) => enterPassiveModeIPv4(ftp);
+
+    // passiveMode: true (default) → NAT-safe PASV (IPv4)
+    // passiveMode: false           → EPSV (extended passive, no IP in response — no NAT issue)
+    if (this.config.passiveMode !== false) {
+      this.client.ftp.ipFamily = 4;
+      this.client.prepareTransfer = enterPassiveModeNatSafe;
+    } else {
+      this.client.prepareTransfer = (ftp) => enterPassiveModeIPv6(ftp);
+    }
+
     const accessPromise = this.client.access({
       host: this.config.host,
       port: this.config.port,
@@ -80,58 +158,64 @@ export class FtpClient implements IFtpClient {
   }
 
   async list(remotePath: string): Promise<RemoteFileEntry[]> {
-    const items = await this.client.list(remotePath);
-    return items.map(mapFileInfo);
+    return this.withLock(async () => {
+      const items = await this.client.list(remotePath);
+      return items.map(mapFileInfo);
+    });
   }
 
   async downloadFile(remotePath: string, localPath: string): Promise<void> {
     await fs.promises.mkdir(path.dirname(localPath), { recursive: true });
-    await this.client.downloadTo(localPath, remotePath);
+    return this.withLock(() => this.client.downloadTo(localPath, remotePath).then(() => {}));
   }
 
   async downloadFolder(remotePath: string, localPath: string): Promise<void> {
     await fs.promises.mkdir(localPath, { recursive: true });
-    await this.client.downloadToDir(localPath, remotePath);
+    return this.withLock(() => this.client.downloadToDir(localPath, remotePath).then(() => {}));
   }
 
   async uploadFile(localPath: string, remotePath: string): Promise<void> {
-    await this.client.uploadFrom(localPath, remotePath);
+    return this.withLock(() => this.client.uploadFrom(localPath, remotePath).then(() => {}));
   }
 
   async uploadFolder(localPath: string, remotePath: string): Promise<void> {
-    await this.client.uploadFromDir(localPath, remotePath);
+    return this.withLock(() => this.client.uploadFromDir(localPath, remotePath).then(() => {}));
   }
 
   async mkdir(remotePath: string): Promise<void> {
-    await this.client.ensureDir(remotePath);
+    return this.withLock(() => this.client.ensureDir(remotePath).then(() => {}));
   }
 
   async delete(remotePath: string): Promise<void> {
-    await this.client.remove(remotePath);
+    return this.withLock(() => this.client.remove(remotePath).then(() => {}));
   }
 
   async rmdir(remotePath: string, _recursive: boolean): Promise<void> {
-    await this.client.removeDir(remotePath);
+    return this.withLock(() => this.client.removeDir(remotePath).then(() => {}));
   }
 
   async rename(oldPath: string, newPath: string): Promise<void> {
-    await this.client.rename(oldPath, newPath);
+    return this.withLock(() => this.client.rename(oldPath, newPath).then(() => {}));
   }
 
   async pwd(): Promise<string> {
-    return this.client.pwd();
+    return this.withLock(() => this.client.pwd());
   }
 
   async getContent(remotePath: string): Promise<Buffer> {
-    const chunks: Buffer[] = [];
-    const pt = new PassThrough();
-    pt.on('data', (chunk: Buffer) => chunks.push(chunk));
-    await this.client.downloadTo(pt as unknown as fs.WriteStream, remotePath);
-    return Buffer.concat(chunks);
+    return this.withLock(async () => {
+      const chunks: Buffer[] = [];
+      const pt = new PassThrough();
+      pt.on('data', (chunk: Buffer) => chunks.push(chunk));
+      await this.client.downloadTo(pt as unknown as fs.WriteStream, remotePath);
+      return Buffer.concat(chunks);
+    });
   }
 
   async putContent(content: Buffer, remotePath: string): Promise<void> {
-    const readable = Readable.from(content);
-    await this.client.uploadFrom(readable as unknown as fs.ReadStream, remotePath);
+    return this.withLock(async () => {
+      const readable = Readable.from(content);
+      await this.client.uploadFrom(readable as unknown as fs.ReadStream, remotePath);
+    });
   }
 }

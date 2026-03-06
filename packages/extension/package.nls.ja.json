@@ -1,0 +1,20 @@
+{
+  "viewName.servers": "FTP マネージャー",
+  "category.ftpManager": "FTP マネージャー",
+  "command.addServer": "サーバーを追加",
+  "command.editServer": "サーバーを編集",
+  "command.deleteServer": "サーバーを削除",
+  "command.connect": "接続",
+  "command.disconnect": "切断",
+  "command.refresh": "更新",
+  "command.uploadFile": "ファイルをアップロード",
+  "command.downloadFile": "ダウンロード",
+  "command.downloadFolder": "フォルダーをダウンロード",
+  "command.newFolder": "新しいフォルダー",
+  "command.newFile": "新しいファイル",
+  "command.rename": "名前を変更",
+  "command.deleteRemote": "削除",
+  "command.copyRemotePath": "リモートパスをコピー",
+  "command.uploadToServer": "FTP サーバーにアップロード",
+  "command.openRemoteFile": "リモートファイルを開く"
+}

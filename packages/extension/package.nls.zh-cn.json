@@ -1,0 +1,20 @@
+{
+  "viewName.servers": "FTP 管理器",
+  "category.ftpManager": "FTP 管理器",
+  "command.addServer": "添加服务器",
+  "command.editServer": "编辑服务器",
+  "command.deleteServer": "删除服务器",
+  "command.connect": "连接",
+  "command.disconnect": "断开连接",
+  "command.refresh": "刷新",
+  "command.uploadFile": "上传文件",
+  "command.downloadFile": "下载",
+  "command.downloadFolder": "下载文件夹",
+  "command.newFolder": "新建文件夹",
+  "command.newFile": "新建文件",
+  "command.rename": "重命名",
+  "command.deleteRemote": "删除",
+  "command.copyRemotePath": "复制远程路径",
+  "command.uploadToServer": "上传到 FTP 服务器",
+  "command.openRemoteFile": "打开远程文件"
+}

@@ -13,6 +13,7 @@ export const COMMAND_IDS = {
   DOWNLOAD_FILE: 'ftpmanager.downloadFile',
   DOWNLOAD_FOLDER: 'ftpmanager.downloadFolder',
   NEW_FOLDER: 'ftpmanager.newFolder',
+  NEW_FILE: 'ftpmanager.newFile',
   RENAME: 'ftpmanager.rename',
   DELETE_REMOTE: 'ftpmanager.deleteRemote',
   COPY_REMOTE_PATH: 'ftpmanager.copyRemotePath',
