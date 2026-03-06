@@ -18,6 +18,7 @@ export interface IFtpClient {
   rename(oldPath: string, newPath: string): Promise<void>;
   getContent(remotePath: string): Promise<Buffer>;
   putContent(content: Buffer, remotePath: string): Promise<void>;
+  pwd(): Promise<string>;
 }
 
 function mapFileInfo(info: FileInfo): RemoteFileEntry {
@@ -101,6 +102,10 @@ export class FtpClient implements IFtpClient {
 
   async rename(oldPath: string, newPath: string): Promise<void> {
     await this.client.rename(oldPath, newPath);
+  }
+
+  async pwd(): Promise<string> {
+    return this.client.pwd();
   }
 
   async getContent(remotePath: string): Promise<Buffer> {

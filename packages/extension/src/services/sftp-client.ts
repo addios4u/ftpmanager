@@ -93,6 +93,11 @@ export class SftpClient implements IFtpClient {
     await this.client.rename(oldPath, newPath);
   }
 
+  async pwd(): Promise<string> {
+    const result = await this.client.realPath('.');
+    return result;
+  }
+
   async getContent(remotePath: string): Promise<Buffer> {
     const data = await this.client.get(remotePath);
     if (Buffer.isBuffer(data)) return data;

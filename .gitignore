@@ -5,5 +5,5 @@ dist/
 .DS_Store
 *.js.map
 *.d.ts.map
-.omc/state/
+.omc/
 
