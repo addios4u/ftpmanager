@@ -25,6 +25,11 @@ export class FtpFileSystemProvider implements vscode.FileSystemProvider {
     const client = this.connectionManager.getClient(connectionId);
     if (!client) throw vscode.FileSystemError.Unavailable(uri);
 
+    // Root path '/' has no parent to list — return a directory stat directly
+    if (remotePath === '/' || remotePath === '') {
+      return { type: vscode.FileType.Directory, ctime: 0, mtime: 0, size: 0 };
+    }
+
     const parentPath = path.posix.dirname(remotePath);
     const name = path.posix.basename(remotePath);
     const entries = await client.list(parentPath);

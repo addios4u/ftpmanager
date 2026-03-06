@@ -46,7 +46,7 @@ export class FtpClient implements IFtpClient {
       port: this.config.port,
       user: this.config.username,
       password: this.password,
-      secure: this.config.protocol === 'ftps' || this.config.secure,
+      secure: !!(this.config.protocol === 'ftps' || this.config.secure),
       secureOptions: this.config.protocol === 'ftps' ? { rejectUnauthorized: false } : undefined,
     });
   }

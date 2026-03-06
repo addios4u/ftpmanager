@@ -43,6 +43,28 @@ export const Uri = {
   parse: (s: string) => ({ toString: () => s }),
 };
 
+export enum ViewColumn {
+  One = 1,
+  Two = 2,
+  Three = 3,
+  Active = -1,
+  Beside = -2,
+}
+
+export enum ProgressLocation {
+  SourceControl = 1,
+  Window = 10,
+  Notification = 15,
+}
+
+export const env = {
+  clipboard: {
+    writeText: vi.fn(),
+    readText: vi.fn(async () => ''),
+  },
+  openExternal: vi.fn(),
+};
+
 export const window = {
   showErrorMessage: vi.fn(),
   showInformationMessage: vi.fn(),
@@ -50,7 +72,11 @@ export const window = {
   showInputBox: vi.fn(),
   showOpenDialog: vi.fn(),
   showSaveDialog: vi.fn(),
+  showQuickPick: vi.fn(),
   createWebviewPanel: vi.fn(),
+  withProgress: vi.fn(async (_opts: unknown, task: (progress: { report: (v: unknown) => void }) => Promise<unknown>) => {
+    return task({ report: vi.fn() });
+  }),
 };
 
 export const workspace = {
@@ -78,8 +104,30 @@ export const FileType = {
 };
 
 export class FileSystemError extends Error {
-  static FileNotFound(msg?: string) { return new FileSystemError(msg ?? 'FileNotFound'); }
-  constructor(msg?: string) { super(msg); }
+  static FileNotFound(msg?: string | { toString(): string }) {
+    return new FileSystemError(`FileNotFound: ${msg}`);
+  }
+  static Unavailable(msg?: string | { toString(): string }) {
+    return new FileSystemError(`Unavailable: ${msg}`);
+  }
+  static NoPermissions(msg?: string | { toString(): string }) {
+    return new FileSystemError(`NoPermissions: ${msg}`);
+  }
+  constructor(msg?: string) { super(msg); this.name = 'FileSystemError'; }
+}
+
+export const FileChangeType = {
+  Changed: 1,
+  Created: 2,
+  Deleted: 3,
+};
+
+export class Disposable {
+  constructor(private readonly fn: () => void) {}
+  dispose() { this.fn(); }
+  static from(...disposables: { dispose(): unknown }[]): Disposable {
+    return new Disposable(() => disposables.forEach((d) => d.dispose()));
+  }
 }
 
 export class DataTransferItem {

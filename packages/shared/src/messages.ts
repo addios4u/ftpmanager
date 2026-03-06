@@ -14,6 +14,7 @@ export type ExtensionMessage =
   | { type: 'stateSync'; connections: FtpConnectionInfo[] }
   | { type: 'connectionTestResult'; success: boolean; error?: string }
   | { type: 'filePicked'; target: 'privateKey'; path: string }
+  | { type: 'openEdit'; editId: string }
   | { type: 'error'; message: string };
 
 export type { FtpConnectionConfig, FtpConnectionInfo };
