@@ -16,7 +16,7 @@ const emptyConfig = (): FtpConnectionConfig => ({
   host: '',
   port: 21,
   username: '',
-  remotePath: '/',
+  remotePath: '',
 });
 
 export function ConnectionDialog({ editId }: Props) {
@@ -138,7 +138,7 @@ export function ConnectionDialog({ editId }: Props) {
             type="text"
             value={config.remotePath}
             onChange={(e) => setConfig((c) => ({ ...c, remotePath: e.target.value }))}
-            placeholder="/public_html"
+            placeholder="/public_html  (empty = home directory)"
           />
         </div>
 

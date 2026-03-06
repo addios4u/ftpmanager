@@ -201,8 +201,18 @@ export class FtpTreeProvider
       }
     }
 
-    // Try configured remotePath; fall back to root if it fails (e.g. 503 / path not found)
-    return this.listWithFallback(node.connectionId, config.remotePath, config.name);
+    // Resolve effective path: empty = use server home dir (pwd), otherwise use configured path
+    const client = this.connectionManager.getClient(node.connectionId);
+    let effectivePath = config.remotePath || '/';
+    if (!config.remotePath && client) {
+      try {
+        effectivePath = await client.pwd();
+      } catch {
+        effectivePath = '/';
+      }
+    }
+
+    return this.listWithFallback(node.connectionId, effectivePath, config.name);
   }
 
   private async listWithFallback(
