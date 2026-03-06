@@ -1,6 +1,15 @@
 import * as vscode from 'vscode';
 import type { ConnectionManager } from '../services/connection-manager.js';
 
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error(`Operation timed out after ${ms / 1000}s`)), ms),
+    ),
+  ]);
+}
+
 export type FtpNodeType = 'server' | 'directory' | 'file';
 
 export interface FtpTreeNode {
@@ -158,61 +167,82 @@ export class FtpTreeProvider
     const config = this.connectionManager.getConnection(node.connectionId);
     if (!config) return [];
 
-    if (!this.connectionManager.isConnected(node.connectionId)) {
-      if (this.connectingIds.has(node.connectionId)) return [];
-      this.connectingIds.add(node.connectionId);
-      const controller = new AbortController();
-      let cancelled = false;
-      try {
-        await vscode.window.withProgress(
-          {
-            location: vscode.ProgressLocation.Notification,
-            title: vscode.l10n.t('Connecting to "{0}"...', config.name),
-            cancellable: true,
-          },
-          async (progress, token) => {
-            token.onCancellationRequested(() => {
-              cancelled = true;
-              controller.abort();
-            });
-            await this.connectionManager.connect(
-              node.connectionId,
-              controller.signal,
-              (attempt, maxAttempts, delayMs) => {
-                progress.report({
-                  message: vscode.l10n.t(
-                    'Retry {0}/{1} — waiting {2}s (too many connections)...',
-                    attempt, maxAttempts, delayMs / 1000,
-                  ),
-                });
-              },
-            );
-          },
-        );
-      } catch (err) {
-        if (!cancelled) {
-          vscode.window.showErrorMessage(
-            vscode.l10n.t('Failed to connect "{0}": {1}', config.name, err instanceof Error ? err.message : String(err)),
+    if (this.connectingIds.has(node.connectionId)) return [];
+
+    const alreadyConnected = this.connectionManager.isConnected(node.connectionId);
+    if (alreadyConnected) {
+      const client = this.connectionManager.getClient(node.connectionId);
+      const effectivePath = config.remotePath || await this.resolvePwd(client) || '/';
+      return this.listWithFallback(node.connectionId, effectivePath, config.name);
+    }
+
+    this.connectingIds.add(node.connectionId);
+    const controller = new AbortController();
+    let cancelled = false;
+    let result: FtpTreeNode[] = [];
+
+    try {
+      await vscode.window.withProgress(
+        {
+          location: vscode.ProgressLocation.Notification,
+          title: vscode.l10n.t('Connecting to "{0}"...', config.name),
+          cancellable: true,
+        },
+        async (progress, token) => {
+          token.onCancellationRequested(() => {
+            cancelled = true;
+            controller.abort();
+          });
+
+          await this.connectionManager.connect(
+            node.connectionId,
+            controller.signal,
+            (attempt, maxAttempts, delayMs) => {
+              progress.report({
+                message: vscode.l10n.t(
+                  'Retry {0}/{1} — waiting {2}s (too many connections)...',
+                  attempt, maxAttempts, delayMs / 1000,
+                ),
+              });
+            },
           );
-        }
-        return [];
-      } finally {
-        this.connectingIds.delete(node.connectionId);
+
+          if (controller.signal.aborted) return;
+
+          progress.report({ message: vscode.l10n.t('Loading directory...') });
+
+          const client = this.connectionManager.getClient(node.connectionId);
+          const effectivePath = config.remotePath || await this.resolvePwd(client) || '/';
+          result = await this.listWithTimeout(node.connectionId, effectivePath, config.name, controller.signal);
+        },
+      );
+    } catch (err) {
+      if (!cancelled) {
+        vscode.window.showErrorMessage(
+          vscode.l10n.t('Failed to connect "{0}": {1}', config.name, err instanceof Error ? err.message : String(err)),
+        );
       }
+      return [];
+    } finally {
+      this.connectingIds.delete(node.connectionId);
     }
 
-    // Resolve effective path: empty = use server home dir (pwd), otherwise use configured path
-    const client = this.connectionManager.getClient(node.connectionId);
-    let effectivePath = config.remotePath || '/';
-    if (!config.remotePath && client) {
-      try {
-        effectivePath = await client.pwd();
-      } catch {
-        effectivePath = '/';
-      }
-    }
+    return result;
+  }
 
-    return this.listWithFallback(node.connectionId, effectivePath, config.name);
+  private async resolvePwd(client: import('../services/ftp-client.js').IFtpClient | undefined): Promise<string> {
+    if (!client) return '/';
+    try { return await withTimeout(client.pwd(), 10_000); } catch { return '/'; }
+  }
+
+  private async listWithTimeout(
+    connectionId: string,
+    remotePath: string,
+    serverName: string,
+    signal: AbortSignal,
+  ): Promise<FtpTreeNode[]> {
+    if (signal.aborted) return [];
+    return this.listWithFallback(connectionId, remotePath, serverName);
   }
 
   private async listWithFallback(
@@ -224,14 +254,14 @@ export class FtpTreeProvider
     if (!client) return [];
 
     try {
-      const entries = await client.list(remotePath);
+      const entries = await withTimeout(client.list(remotePath), 20_000);
       return this.mapEntries(entries, connectionId, remotePath);
     } catch {
       if (remotePath === '/') return [];
 
       // Configured path failed — try root as fallback
       try {
-        const rootEntries = await client.list('/');
+        const rootEntries = await withTimeout(client.list('/'), 20_000);
         vscode.window.showWarningMessage(
           vscode.l10n.t('Path "{0}" is unavailable for {1}. Showing root directory.', remotePath, serverName),
         );
@@ -273,7 +303,7 @@ export class FtpTreeProvider
     if (!client) return [];
 
     try {
-      const entries = await client.list(remotePath);
+      const entries = await withTimeout(client.list(remotePath), 20_000);
       return this.mapEntries(entries, connectionId, remotePath);
     } catch (err) {
       vscode.window.showErrorMessage(
