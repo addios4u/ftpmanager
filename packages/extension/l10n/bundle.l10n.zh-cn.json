@@ -27,5 +27,22 @@
   "Select server to edit": "选择要编辑的服务器",
   "Select server to delete": "选择要删除的服务器",
   "Select server to connect": "选择要连接的服务器",
-  "Select server to disconnect": "选择要断开的服务器"
+  "Select server to disconnect": "选择要断开的服务器",
+  "No active connection. Connect to a server first.": "无活动连接，请先连接服务器。",
+  "Uploading {0} file(s)...": "正在上传 {0} 个文件...",
+  "Uploaded {0} file(s) to {1}": "已上传 {0} 个文件到 {1}",
+  "Search Remote Files": "搜索远程文件",
+  "Enter keyword to search": "输入搜索关键字",
+  "Search keyword": "搜索关键字",
+  "Search file names only (fast)": "仅搜索文件名（快速）",
+  "File content": "文件内容",
+  "Search inside files (slower, downloads files)": "搜索文件内容（较慢，需下载文件）",
+  "Search Mode": "搜索模式",
+  "Select search mode": "选择搜索模式",
+  "Searching \"{0}\" on {1}...": "正在 {1} 上搜索 \"{0}\"...",
+  "Scanning: {0}": "扫描中: {0}",
+  "Searching: {0}": "搜索中: {0}",
+  "No files found for \"{0}\"": "未找到与 \"{0}\" 匹配的文件",
+  "Search Results ({0} found)": "搜索结果（找到 {0} 个）",
+  "Select a file to open": "选择要打开的文件"
 }

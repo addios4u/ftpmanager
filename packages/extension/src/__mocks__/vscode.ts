@@ -40,7 +40,12 @@ export class ThemeIcon {
 export const Uri = {
   joinPath: (_base: unknown, ...parts: string[]) => ({ fsPath: parts.join('/'), toString: () => parts.join('/') }),
   file: (path: string) => ({ fsPath: path, toString: () => path }),
-  parse: (s: string) => ({ toString: () => s }),
+  parse: (s: string) => {
+    // Extract fsPath from a file:// URI (e.g. file:///path/to/file -> /path/to/file)
+    const m = s.match(/^file:\/\/([^?#]*)/);
+    const fsPath = m ? decodeURIComponent(m[1]) : s;
+    return { fsPath, toString: () => s };
+  },
 };
 
 export enum ViewColumn {
@@ -74,6 +79,7 @@ export const window = {
   showSaveDialog: vi.fn(),
   showQuickPick: vi.fn(),
   createWebviewPanel: vi.fn(),
+  createQuickPick: vi.fn(() => makeQuickPick()),
   withProgress: vi.fn(async (_opts: unknown, task: (progress: { report: (v: unknown) => void }) => Promise<unknown>) => {
     return task({ report: vi.fn() });
   }),
@@ -138,4 +144,29 @@ export class DataTransfer {
   private data = new Map<string, DataTransferItem>();
   set(type: string, item: DataTransferItem) { this.data.set(type, item); }
   get(type: string) { return this.data.get(type); }
+}
+
+export enum QuickPickItemKind {
+  Default = 0,
+  Separator = -1,
+}
+
+function makeQuickPick() {
+  return {
+    items: [] as unknown[],
+    placeholder: '',
+    title: '',
+    busy: false,
+    matchOnDescription: false,
+    matchOnDetail: false,
+    show: vi.fn(),
+    hide: vi.fn(),
+    dispose: vi.fn(),
+    onDidChangeValue: vi.fn((_cb: (value: string) => void) => ({ dispose: vi.fn() })),
+    onDidAccept: vi.fn((_cb: () => void) => ({ dispose: vi.fn() })),
+    onDidHide: vi.fn((_cb: () => void) => ({ dispose: vi.fn() })),
+    activeItems: [] as unknown[],
+    selectedItems: [] as unknown[],
+    value: '',
+  };
 }

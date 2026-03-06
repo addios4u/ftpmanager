@@ -5,6 +5,8 @@ import { FtpTreeProvider } from './providers/ftp-tree.js';
 import { WebviewPanelManager } from './webview/panel-manager.js';
 import { FtpFileSystemProvider } from './providers/ftp-fs-provider.js';
 import { COMMAND_IDS, VIEW_IDS } from '@ftpmanager/shared';
+import { searchByName, searchByContent } from './services/search-service.js';
+import type { SearchResult } from './services/search-service.js';
 
 let connectionManager: ConnectionManager;
 let treeProvider: FtpTreeProvider;
@@ -329,6 +331,97 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand(COMMAND_IDS.COPY_REMOTE_PATH, (node) => {
       const n = node as { remotePath: string };
       void vscode.env.clipboard.writeText(n.remotePath);
+    }),
+
+    vscode.commands.registerCommand(COMMAND_IDS.SEARCH_FILES, async (node?: unknown) => {
+      const n = node as { connectionId?: string } | undefined;
+      let connectionId = n?.connectionId;
+      if (!connectionId) {
+        connectionId = await pickServer(connectionManager, vscode.l10n.t('Select server to search'));
+      }
+      if (!connectionId) return;
+
+      const client = connectionManager.getClient(connectionId);
+      if (!client) {
+        vscode.window.showErrorMessage(vscode.l10n.t('No active connection. Connect to a server first.'));
+        return;
+      }
+
+      const config = connectionManager.getConnection(connectionId);
+      if (!config) return;
+
+      const keyword = await vscode.window.showInputBox({
+        title: vscode.l10n.t('Search Remote Files'),
+        prompt: vscode.l10n.t('Enter keyword to search'),
+        placeHolder: vscode.l10n.t('Search keyword'),
+        ignoreFocusOut: true,
+        validateInput: (v) => (v.trim() ? null : 'Keyword is required'),
+      });
+      if (!keyword) return;
+
+      const searchMode = await vscode.window.showQuickPick(
+        [
+          { label: vscode.l10n.t('File name'), description: vscode.l10n.t('Search file names only (fast)'), value: 'name' as const },
+          { label: vscode.l10n.t('File content'), description: vscode.l10n.t('Search inside files (slower, downloads files)'), value: 'content' as const },
+        ],
+        { title: vscode.l10n.t('Search Mode'), placeHolder: vscode.l10n.t('Select search mode') },
+      );
+      if (!searchMode) return;
+
+      const controller = new AbortController();
+      let results: SearchResult[] = [];
+      const rootPath = config.remotePath || '/';
+
+      await vscode.window.withProgress(
+        {
+          location: vscode.ProgressLocation.Notification,
+          title: vscode.l10n.t('Searching "{0}" on {1}...', keyword, config.name),
+          cancellable: true,
+        },
+        async (progress, token) => {
+          token.onCancellationRequested(() => controller.abort());
+
+          if (searchMode.value === 'name') {
+            results = await searchByName(client, connectionId!, rootPath, keyword, { signal: controller.signal }, (p) => {
+              progress.report({ message: p });
+            });
+          } else {
+            const allFiles = await searchByName(client, connectionId!, rootPath, '', { signal: controller.signal }, (p) => {
+              progress.report({ message: vscode.l10n.t('Scanning: {0}', p) });
+            });
+            if (!controller.signal.aborted) {
+              results = await searchByContent(client, connectionId!, allFiles, keyword, controller.signal, (p) => {
+                progress.report({ message: vscode.l10n.t('Searching: {0}', p) });
+              });
+            }
+          }
+        },
+      );
+
+      if (results.length === 0) {
+        vscode.window.showInformationMessage(vscode.l10n.t('No files found for "{0}"', keyword));
+        return;
+      }
+
+      const picked = await vscode.window.showQuickPick(
+        results.map((r) => ({
+          label: r.fileName,
+          description: r.remotePath,
+          detail: r.matchType === 'content' ? `Line ${r.lineNumber}: ${r.lineContent}` : undefined,
+          result: r,
+        })),
+        {
+          title: vscode.l10n.t('Search Results ({0} found)', results.length),
+          placeHolder: vscode.l10n.t('Select a file to open'),
+          matchOnDescription: true,
+          matchOnDetail: true,
+        },
+      );
+
+      if (!picked) return;
+
+      const uri = vscode.Uri.parse(`ftpmanager://${connectionId}${picked.result.remotePath}`);
+      await vscode.commands.executeCommand('vscode.open', uri);
     }),
 
     vscode.commands.registerCommand(COMMAND_IDS.UPLOAD_TO_SERVER, async (uri?: vscode.Uri) => {

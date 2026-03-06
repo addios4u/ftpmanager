@@ -19,6 +19,7 @@ export const COMMAND_IDS = {
   COPY_REMOTE_PATH: 'ftpmanager.copyRemotePath',
   UPLOAD_TO_SERVER: 'ftpmanager.uploadToServer',
   OPEN_REMOTE_FILE: 'ftpmanager.openRemoteFile',
+  SEARCH_FILES: 'ftpmanager.searchFiles',
 } as const;
 
 export const DEFAULT_PORTS: Record<string, number> = {

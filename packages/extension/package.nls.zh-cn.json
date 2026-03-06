@@ -16,5 +16,6 @@
   "command.deleteRemote": "删除",
   "command.copyRemotePath": "复制远程路径",
   "command.uploadToServer": "上传到 FTP 服务器",
-  "command.openRemoteFile": "打开远程文件"
+  "command.openRemoteFile": "打开远程文件",
+  "command.searchFiles": "搜索远程文件"
 }

@@ -16,5 +16,6 @@
   "command.deleteRemote": "Delete",
   "command.copyRemotePath": "Copy Remote Path",
   "command.uploadToServer": "Upload to FTP Server",
-  "command.openRemoteFile": "Open Remote File"
+  "command.openRemoteFile": "Open Remote File",
+  "command.searchFiles": "Search Remote Files"
 }

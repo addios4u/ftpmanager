@@ -27,5 +27,22 @@
   "Select server to edit": "編集するサーバーを選択",
   "Select server to delete": "削除するサーバーを選択",
   "Select server to connect": "接続するサーバーを選択",
-  "Select server to disconnect": "切断するサーバーを選択"
+  "Select server to disconnect": "切断するサーバーを選択",
+  "No active connection. Connect to a server first.": "アクティブな接続がありません。先にサーバーに接続してください。",
+  "Uploading {0} file(s)...": "{0}個のファイルをアップロード中...",
+  "Uploaded {0} file(s) to {1}": "{1}に{0}個のファイルをアップロードしました",
+  "Search Remote Files": "リモートファイルを検索",
+  "Enter keyword to search": "検索キーワードを入力",
+  "Search keyword": "検索キーワード",
+  "Search file names only (fast)": "ファイル名のみ検索（高速）",
+  "File content": "ファイル内容",
+  "Search inside files (slower, downloads files)": "ファイル内容を検索（低速、ファイルをダウンロード）",
+  "Search Mode": "検索モード",
+  "Select search mode": "検索モードを選択",
+  "Searching \"{0}\" on {1}...": "{1}で\"{0}\"を検索中...",
+  "Scanning: {0}": "スキャン中: {0}",
+  "Searching: {0}": "検索中: {0}",
+  "No files found for \"{0}\"": "\"{0}\"に一致するファイルが見つかりません",
+  "Search Results ({0} found)": "検索結果（{0}件）",
+  "Select a file to open": "開くファイルを選択"
 }

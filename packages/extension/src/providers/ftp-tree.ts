@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import * as path from 'path';
 import type { ConnectionManager } from '../services/connection-manager.js';
 
 function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
@@ -59,7 +60,7 @@ const DRAG_MIME = 'application/vnd.code.tree.ftpmanager.servers';
 export class FtpTreeProvider
   implements vscode.TreeDataProvider<FtpTreeNode>, vscode.TreeDragAndDropController<FtpTreeNode>
 {
-  readonly dropMimeTypes = [DRAG_MIME];
+  readonly dropMimeTypes = [DRAG_MIME, 'text/uri-list'];
   readonly dragMimeTypes = [DRAG_MIME];
 
   private readonly _onDidChangeTreeData = new vscode.EventEmitter<FtpTreeNode | undefined | null>();
@@ -92,6 +93,15 @@ export class FtpTreeProvider
   }
 
   async handleDrop(target: FtpTreeNode | undefined, dataTransfer: vscode.DataTransfer): Promise<void> {
+    // OS file drop (text/uri-list)
+    const uriListItem = dataTransfer.get('text/uri-list');
+    if (uriListItem && target) {
+      if (target.nodeType === 'directory' || target.nodeType === 'server') {
+        await this.handleOsFileDrop(target, String(uriListItem.value));
+      }
+      return;
+    }
+
     const item = dataTransfer.get(DRAG_MIME);
     if (!item) return;
     const draggedIds = item.value as string[];
@@ -316,5 +326,47 @@ export class FtpTreeProvider
       );
       return [];
     }
+  }
+
+  private async handleOsFileDrop(target: FtpTreeNode, uriList: string): Promise<void> {
+    // Parse URI list: split by newlines, filter comments/empty, get fsPath
+    const localPaths = uriList
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0 && !line.startsWith('#'))
+      .map((line) => vscode.Uri.parse(line).fsPath);
+
+    if (localPaths.length === 0) return;
+
+    const client = this.connectionManager.getClient(target.connectionId);
+    if (!client) {
+      vscode.window.showErrorMessage(vscode.l10n.t('No active connection'));
+      return;
+    }
+
+    const uploadDir = target.remotePath;
+    const total = localPaths.length;
+
+    await vscode.window.withProgress(
+      {
+        location: vscode.ProgressLocation.Notification,
+        title: vscode.l10n.t('Uploading {0} file(s)...', total),
+        cancellable: false,
+      },
+      async (progress) => {
+        for (let i = 0; i < localPaths.length; i++) {
+          const localPath = localPaths[i];
+          const fileName = path.basename(localPath);
+          progress.report({ message: `${i + 1}/${total}: ${fileName}` });
+          const remoteDest = uploadDir.endsWith('/') ? uploadDir + fileName : uploadDir + '/' + fileName;
+          await client.uploadFile(localPath, remoteDest);
+        }
+      },
+    );
+
+    this._onDidChangeTreeData.fire(target);
+    vscode.window.showInformationMessage(
+      vscode.l10n.t('Uploaded {0} file(s) to {1}', total, uploadDir),
+    );
   }
 }

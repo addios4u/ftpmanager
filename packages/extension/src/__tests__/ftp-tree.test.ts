@@ -111,4 +111,82 @@ describe('FtpTreeProvider', () => {
     await provider.handleDrop(fileTarget, dt);
     expect(mgr.reorderConnections).not.toHaveBeenCalled();
   });
+
+  it('handleDrop with text/uri-list uploads files to directory node', async () => {
+    const mockClient = { uploadFile: vi.fn().mockResolvedValue(undefined) };
+    const mgr = makeMockManager([{ id: 'c1', name: 'S', remotePath: '/var/www' }]);
+    (mgr.getClient as ReturnType<typeof vi.fn>).mockReturnValue(mockClient);
+    const provider = new FtpTreeProvider(mgr, fakeUri as never);
+
+    const dt = new DataTransfer();
+    dt.set('text/uri-list', new DataTransferItem('file:///path/to/file.txt\nfile:///path/to/other.js'));
+
+    const dirTarget: FtpTreeNode = { nodeType: 'directory', label: 'www', connectionId: 'c1', remotePath: '/var/www' };
+    await provider.handleDrop(dirTarget, dt);
+
+    expect(mockClient.uploadFile).toHaveBeenCalledTimes(2);
+    expect(mockClient.uploadFile).toHaveBeenCalledWith('/path/to/file.txt', '/var/www/file.txt');
+    expect(mockClient.uploadFile).toHaveBeenCalledWith('/path/to/other.js', '/var/www/other.js');
+    expect(mgr.reorderConnections).not.toHaveBeenCalled();
+  });
+
+  it('handleDrop with text/uri-list shows error when no client', async () => {
+    const mgr = makeMockManager([{ id: 'c1', name: 'S', remotePath: '/' }]);
+    (mgr.getClient as ReturnType<typeof vi.fn>).mockReturnValue(undefined);
+    const provider = new FtpTreeProvider(mgr, fakeUri as never);
+
+    const dt = new DataTransfer();
+    dt.set('text/uri-list', new DataTransferItem('file:///path/to/file.txt'));
+
+    const dirTarget: FtpTreeNode = { nodeType: 'directory', label: 'dir', connectionId: 'c1', remotePath: '/dir' };
+    await provider.handleDrop(dirTarget, dt);
+
+    // vscode.window.showErrorMessage should be called
+    const { window } = await import('vscode');
+    expect(window.showErrorMessage).toHaveBeenCalled();
+  });
+
+  it('handleDrop with text/uri-list does nothing when no target', async () => {
+    const mockClient = { uploadFile: vi.fn() };
+    const mgr = makeMockManager([{ id: 'c1', name: 'S', remotePath: '/' }]);
+    (mgr.getClient as ReturnType<typeof vi.fn>).mockReturnValue(mockClient);
+    const provider = new FtpTreeProvider(mgr, fakeUri as never);
+
+    const dt = new DataTransfer();
+    dt.set('text/uri-list', new DataTransferItem('file:///path/to/file.txt'));
+
+    await provider.handleDrop(undefined, dt);
+
+    expect(mockClient.uploadFile).not.toHaveBeenCalled();
+  });
+
+  it('handleDrop with text/uri-list ignores files dropped on file node', async () => {
+    const mockClient = { uploadFile: vi.fn() };
+    const mgr = makeMockManager([{ id: 'c1', name: 'S', remotePath: '/' }]);
+    (mgr.getClient as ReturnType<typeof vi.fn>).mockReturnValue(mockClient);
+    const provider = new FtpTreeProvider(mgr, fakeUri as never);
+
+    const dt = new DataTransfer();
+    dt.set('text/uri-list', new DataTransferItem('file:///path/to/file.txt'));
+
+    const fileTarget: FtpTreeNode = { nodeType: 'file', label: 'f.txt', connectionId: 'c1', remotePath: '/f.txt' };
+    await provider.handleDrop(fileTarget, dt);
+
+    expect(mockClient.uploadFile).not.toHaveBeenCalled();
+  });
+
+  it('handleDrop with text/uri-list uploads to server root path', async () => {
+    const mockClient = { uploadFile: vi.fn().mockResolvedValue(undefined) };
+    const mgr = makeMockManager([{ id: 'c1', name: 'S', remotePath: '/public_html' }]);
+    (mgr.getClient as ReturnType<typeof vi.fn>).mockReturnValue(mockClient);
+    const provider = new FtpTreeProvider(mgr, fakeUri as never);
+
+    const dt = new DataTransfer();
+    dt.set('text/uri-list', new DataTransferItem('file:///local/test.php'));
+
+    const serverTarget: FtpTreeNode = { nodeType: 'server', label: 'S', connectionId: 'c1', remotePath: '/public_html' };
+    await provider.handleDrop(serverTarget, dt);
+
+    expect(mockClient.uploadFile).toHaveBeenCalledWith('/local/test.php', '/public_html/test.php');
+  });
 });

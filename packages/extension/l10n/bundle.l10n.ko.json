@@ -21,5 +21,22 @@
   "Enter folder name": "폴더 이름 입력",
   "Folder name": "폴더 이름",
   "Enter new name": "새 이름 입력",
-  "New name": "새 이름"
+  "New name": "새 이름",
+  "No active connection. Connect to a server first.": "활성 연결이 없습니다. 먼저 서버에 연결하세요.",
+  "Uploading {0} file(s)...": "{0}개 파일 업로드 중...",
+  "Uploaded {0} file(s) to {1}": "{1}에 {0}개 파일 업로드 완료",
+  "Search Remote Files": "원격 파일 검색",
+  "Enter keyword to search": "검색할 키워드 입력",
+  "Search keyword": "검색 키워드",
+  "Search file names only (fast)": "파일 이름만 검색 (빠름)",
+  "File content": "파일 내용",
+  "Search inside files (slower, downloads files)": "파일 내용 검색 (느림, 파일 다운로드 필요)",
+  "Search Mode": "검색 모드",
+  "Select search mode": "검색 모드 선택",
+  "Searching \"{0}\" on {1}...": "{1}에서 \"{0}\" 검색 중...",
+  "Scanning: {0}": "스캔 중: {0}",
+  "Searching: {0}": "검색 중: {0}",
+  "No files found for \"{0}\"": "\"{0}\"에 대한 파일을 찾을 수 없습니다",
+  "Search Results ({0} found)": "검색 결과 ({0}개)",
+  "Select a file to open": "열 파일 선택"
 }

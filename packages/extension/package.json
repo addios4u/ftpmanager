@@ -2,7 +2,7 @@
   "name": "ftpmanager",
   "displayName": "FTPManager",
   "description": "FTP/SFTP client for VS Code - connect, browse, edit and transfer files on remote servers",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "publisher": "addios4u",
   "license": "MIT",
   "repository": {
@@ -129,6 +129,12 @@
         "command": "ftpmanager.openRemoteFile",
         "title": "%command.openRemoteFile%",
         "category": "%category.ftpManager%"
+      },
+      {
+        "command": "ftpmanager.searchFiles",
+        "title": "%command.searchFiles%",
+        "icon": "$(search)",
+        "category": "%category.ftpManager%"
       }
     ],
     "menus": {
@@ -140,6 +146,11 @@
         },
         {
           "command": "ftpmanager.refresh",
+          "when": "view == ftpmanager.servers",
+          "group": "navigation"
+        },
+        {
+          "command": "ftpmanager.searchFiles",
           "when": "view == ftpmanager.servers",
           "group": "navigation"
         }
