@@ -173,7 +173,57 @@ export class FtpTreeProvider
       }
     }
 
-    return this.listDirectory(node.connectionId, config.remotePath);
+    // Try configured remotePath; fall back to root if it fails (e.g. 503 / path not found)
+    return this.listWithFallback(node.connectionId, config.remotePath, config.name);
+  }
+
+  private async listWithFallback(
+    connectionId: string,
+    remotePath: string,
+    serverName: string,
+  ): Promise<FtpTreeNode[]> {
+    const client = this.connectionManager.getClient(connectionId);
+    if (!client) return [];
+
+    try {
+      const entries = await client.list(remotePath);
+      return this.mapEntries(entries, connectionId, remotePath);
+    } catch {
+      if (remotePath === '/') return [];
+
+      // Configured path failed — try root as fallback
+      try {
+        const rootEntries = await client.list('/');
+        vscode.window.showWarningMessage(
+          vscode.l10n.t('Path "{0}" is unavailable for {1}. Showing root directory.', remotePath, serverName),
+        );
+        return this.mapEntries(rootEntries, connectionId, '/');
+      } catch (rootErr) {
+        vscode.window.showErrorMessage(
+          vscode.l10n.t('Failed to load directory: {0}', rootErr instanceof Error ? rootErr.message : String(rootErr)),
+        );
+        return [];
+      }
+    }
+  }
+
+  private mapEntries(
+    entries: import('@ftpmanager/shared').RemoteFileEntry[],
+    connectionId: string,
+    remotePath: string,
+  ): FtpTreeNode[] {
+    return entries
+      .filter((e) => e.name !== '.' && e.name !== '..')
+      .sort((a, b) => {
+        if (a.type === b.type) return a.name.localeCompare(b.name);
+        return a.type === 'directory' ? -1 : 1;
+      })
+      .map((entry): FtpTreeNode => ({
+        nodeType: entry.type === 'directory' ? 'directory' : 'file',
+        label: entry.name,
+        connectionId,
+        remotePath: remotePath.endsWith('/') ? remotePath + entry.name : remotePath + '/' + entry.name,
+      }));
   }
 
   private async getDirectoryChildren(node: FtpTreeNode): Promise<FtpTreeNode[]> {
@@ -186,20 +236,7 @@ export class FtpTreeProvider
 
     try {
       const entries = await client.list(remotePath);
-      return entries
-        .filter((e) => e.name !== '.' && e.name !== '..')
-        .sort((a, b) => {
-          if (a.type === b.type) return a.name.localeCompare(b.name);
-          return a.type === 'directory' ? -1 : 1;
-        })
-        .map((entry): FtpTreeNode => ({
-          nodeType: entry.type === 'directory' ? 'directory' : 'file',
-          label: entry.name,
-          connectionId,
-          remotePath: remotePath.endsWith('/')
-            ? remotePath + entry.name
-            : remotePath + '/' + entry.name,
-        }));
+      return this.mapEntries(entries, connectionId, remotePath);
     } catch (err) {
       vscode.window.showErrorMessage(
         vscode.l10n.t('Failed to load directory: {0}', err instanceof Error ? err.message : String(err)),
