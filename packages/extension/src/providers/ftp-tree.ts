@@ -170,12 +170,23 @@ export class FtpTreeProvider
             title: vscode.l10n.t('Connecting to "{0}"...', config.name),
             cancellable: true,
           },
-          async (_progress, token) => {
+          async (progress, token) => {
             token.onCancellationRequested(() => {
               cancelled = true;
               controller.abort();
             });
-            await this.connectionManager.connect(node.connectionId, controller.signal);
+            await this.connectionManager.connect(
+              node.connectionId,
+              controller.signal,
+              (attempt, maxAttempts, delayMs) => {
+                progress.report({
+                  message: vscode.l10n.t(
+                    'Retry {0}/{1} — waiting {2}s (too many connections)...',
+                    attempt, maxAttempts, delayMs / 1000,
+                  ),
+                });
+              },
+            );
           },
         );
       } catch (err) {

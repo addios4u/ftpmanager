@@ -96,7 +96,11 @@ export class ConnectionManager {
     this._onDidChangeConnections.fire();
   }
 
-  async connect(id: string, signal?: AbortSignal): Promise<void> {
+  async connect(
+    id: string,
+    signal?: AbortSignal,
+    onRetry?: (attempt: number, maxAttempts: number, delayMs: number) => void,
+  ): Promise<void> {
     const config = this.getConnection(id);
     if (!config) throw new Error(`Connection not found: ${id}`);
     if (this.connectedIds.has(id)) return;
@@ -104,16 +108,42 @@ export class ConnectionManager {
     const password = await this.context.secrets.get(PASSWORD_KEY_PREFIX + id);
     const passphrase = await this.context.secrets.get(PASSPHRASE_KEY_PREFIX + id);
 
-    const client: IFtpClient =
-      config.protocol === 'sftp'
-        ? new SftpClient(config, password, passphrase)
-        : new FtpClient(config, password);
+    const MAX_RETRIES = 3;
+    let lastErr: unknown;
 
-    await client.connect(signal);
-    if (signal?.aborted) return; // cancelled before we could register
-    this.clients.set(id, client);
-    this.connectedIds.add(id);
-    this._onDidChangeConnectionState.fire({ connectionId: id, connected: true });
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+      if (signal?.aborted) throw new Error('Cancelled');
+
+      if (attempt > 0) {
+        const delayMs = Math.pow(2, attempt - 1) * 2_000; // 2s, 4s, 8s
+        onRetry?.(attempt, MAX_RETRIES, delayMs);
+        await new Promise<void>((resolve, reject) => {
+          const timer = setTimeout(resolve, delayMs);
+          signal?.addEventListener('abort', () => { clearTimeout(timer); reject(new Error('Cancelled')); }, { once: true });
+        });
+        if (signal?.aborted) throw new Error('Cancelled');
+      }
+
+      const client: IFtpClient =
+        config.protocol === 'sftp'
+          ? new SftpClient(config, password, passphrase)
+          : new FtpClient(config, password);
+
+      try {
+        await client.connect(signal);
+        if (signal?.aborted) return;
+        this.clients.set(id, client);
+        this.connectedIds.add(id);
+        this._onDidChangeConnectionState.fire({ connectionId: id, connected: true });
+        return;
+      } catch (err) {
+        lastErr = err;
+        const msg = (err instanceof Error ? err.message : String(err));
+        const isRetryable = /421|too many/i.test(msg);
+        if (!isRetryable || attempt >= MAX_RETRIES) throw err;
+      }
+    }
+    throw lastErr;
   }
 
   async disconnect(id: string): Promise<void> {
