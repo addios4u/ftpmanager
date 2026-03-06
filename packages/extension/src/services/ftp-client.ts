@@ -5,7 +5,7 @@ import { Client as BasicFtpClient, type FileInfo } from 'basic-ftp';
 import type { FtpConnectionConfig, RemoteFileEntry } from '@ftpmanager/shared';
 
 export interface IFtpClient {
-  connect(): Promise<void>;
+  connect(signal?: AbortSignal): Promise<void>;
   disconnect(): Promise<void>;
   list(remotePath: string): Promise<RemoteFileEntry[]>;
   downloadFile(remotePath: string, localPath: string): Promise<void>;
@@ -41,8 +41,9 @@ export class FtpClient implements IFtpClient {
     this.client.ftp.verbose = false;
   }
 
-  async connect(): Promise<void> {
-    await this.client.access({
+  async connect(signal?: AbortSignal): Promise<void> {
+    this.client.ftp.timeout = 15_000;
+    const accessPromise = this.client.access({
       host: this.config.host,
       port: this.config.port,
       user: this.config.username,
@@ -50,6 +51,13 @@ export class FtpClient implements IFtpClient {
       secure: !!(this.config.protocol === 'ftps' || this.config.secure),
       secureOptions: this.config.protocol === 'ftps' ? { rejectUnauthorized: false } : undefined,
     });
+    if (!signal) { await accessPromise; return; }
+    await Promise.race([
+      accessPromise,
+      new Promise<never>((_, reject) =>
+        signal.addEventListener('abort', () => { this.client.close(); reject(new Error('Cancelled')); }, { once: true }),
+      ),
+    ]);
   }
 
   async disconnect(): Promise<void> {

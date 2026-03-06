@@ -15,11 +15,12 @@ export class SftpClient implements IFtpClient {
     this.client = new SftpClientLib();
   }
 
-  async connect(): Promise<void> {
+  async connect(signal?: AbortSignal): Promise<void> {
     const opts: SftpClientLib.ConnectOptions = {
       host: this.config.host,
       port: this.config.port,
       username: this.config.username,
+      readyTimeout: 15_000,
     };
 
     if (this.config.privateKeyPath) {
@@ -29,7 +30,17 @@ export class SftpClient implements IFtpClient {
       opts.password = this.password;
     }
 
-    await this.client.connect(opts);
+    const connectPromise = this.client.connect(opts);
+    if (!signal) { await connectPromise; return; }
+    await Promise.race([
+      connectPromise,
+      new Promise<never>((_, reject) =>
+        signal.addEventListener('abort', () => {
+          void this.client.end().catch(() => {});
+          reject(new Error('Cancelled'));
+        }, { once: true }),
+      ),
+    ]);
   }
 
   async disconnect(): Promise<void> {

@@ -161,12 +161,29 @@ export class FtpTreeProvider
     if (!this.connectionManager.isConnected(node.connectionId)) {
       if (this.connectingIds.has(node.connectionId)) return [];
       this.connectingIds.add(node.connectionId);
+      const controller = new AbortController();
+      let cancelled = false;
       try {
-        await this.connectionManager.connect(node.connectionId);
-      } catch (err) {
-        vscode.window.showErrorMessage(
-          vscode.l10n.t('Failed to connect "{0}": {1}', config.name, err instanceof Error ? err.message : String(err)),
+        await vscode.window.withProgress(
+          {
+            location: vscode.ProgressLocation.Notification,
+            title: vscode.l10n.t('Connecting to "{0}"...', config.name),
+            cancellable: true,
+          },
+          async (_progress, token) => {
+            token.onCancellationRequested(() => {
+              cancelled = true;
+              controller.abort();
+            });
+            await this.connectionManager.connect(node.connectionId, controller.signal);
+          },
         );
+      } catch (err) {
+        if (!cancelled) {
+          vscode.window.showErrorMessage(
+            vscode.l10n.t('Failed to connect "{0}": {1}', config.name, err instanceof Error ? err.message : String(err)),
+          );
+        }
         return [];
       } finally {
         this.connectingIds.delete(node.connectionId);

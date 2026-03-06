@@ -96,7 +96,7 @@ export class ConnectionManager {
     this._onDidChangeConnections.fire();
   }
 
-  async connect(id: string): Promise<void> {
+  async connect(id: string, signal?: AbortSignal): Promise<void> {
     const config = this.getConnection(id);
     if (!config) throw new Error(`Connection not found: ${id}`);
     if (this.connectedIds.has(id)) return;
@@ -109,7 +109,8 @@ export class ConnectionManager {
         ? new SftpClient(config, password, passphrase)
         : new FtpClient(config, password);
 
-    await client.connect();
+    await client.connect(signal);
+    if (signal?.aborted) return; // cancelled before we could register
     this.clients.set(id, client);
     this.connectedIds.add(id);
     this._onDidChangeConnectionState.fire({ connectionId: id, connected: true });
