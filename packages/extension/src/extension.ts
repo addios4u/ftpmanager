@@ -11,6 +11,27 @@ let treeProvider: FtpTreeProvider;
 let panelManager: WebviewPanelManager;
 let fsProvider: FtpFileSystemProvider;
 
+async function pickServer(
+  connectionManager: ConnectionManager,
+  title: string,
+): Promise<string | undefined> {
+  const connections = connectionManager.getConnections();
+  if (connections.length === 0) {
+    vscode.window.showWarningMessage(vscode.l10n.t('No servers configured.'));
+    return undefined;
+  }
+  if (connections.length === 1) return connections[0].id;
+  const picked = await vscode.window.showQuickPick(
+    connections.map((c) => ({
+      label: c.name,
+      description: `${c.protocol}://${c.host}:${c.port}`,
+      id: c.id,
+    })),
+    { title },
+  );
+  return picked?.id;
+}
+
 export function activate(context: vscode.ExtensionContext): void {
   connectionManager = new ConnectionManager(context);
   treeProvider = new FtpTreeProvider(connectionManager, context.extensionUri);
@@ -38,31 +59,47 @@ export function activate(context: vscode.ExtensionContext): void {
       panelManager.openConnectionDialog();
     }),
 
-    vscode.commands.registerCommand(COMMAND_IDS.EDIT_SERVER, (node) => {
-      panelManager.openConnectionDialog((node as { connectionId: string }).connectionId);
+    vscode.commands.registerCommand(COMMAND_IDS.EDIT_SERVER, async (node) => {
+      const id = node
+        ? (node as { connectionId: string }).connectionId
+        : await pickServer(connectionManager, vscode.l10n.t('Select server to edit'));
+      if (id) panelManager.openConnectionDialog(id);
     }),
 
     vscode.commands.registerCommand(COMMAND_IDS.DELETE_SERVER, async (node) => {
-      const n = node as { connectionId: string; label: string };
+      const id = node
+        ? (node as { connectionId: string; label: string }).connectionId
+        : await pickServer(connectionManager, vscode.l10n.t('Select server to delete'));
+      if (!id) return;
+      const cfg = connectionManager.getConnection(id);
+      if (!cfg) return;
       const confirm = await vscode.window.showWarningMessage(
-        vscode.l10n.t('Delete server "{0}"?', n.label),
+        vscode.l10n.t('Delete server "{0}"?', cfg.name),
         { modal: true },
         vscode.l10n.t('Delete'),
       );
       if (confirm === vscode.l10n.t('Delete')) {
-        await connectionManager.deleteConnection(n.connectionId);
+        await connectionManager.deleteConnection(id);
         treeProvider.refresh();
       }
     }),
 
-    vscode.commands.registerCommand(COMMAND_IDS.CONNECT, (node) => {
+    vscode.commands.registerCommand(COMMAND_IDS.CONNECT, async (node) => {
+      const id = node
+        ? (node as { connectionId: string }).connectionId
+        : await pickServer(connectionManager, vscode.l10n.t('Select server to connect'));
+      if (!id) return;
       void connectionManager
-        .connect((node as { connectionId: string }).connectionId)
+        .connect(id)
         .then(() => treeProvider.refresh(node as Parameters<typeof treeProvider.refresh>[0]));
     }),
 
     vscode.commands.registerCommand(COMMAND_IDS.DISCONNECT, async (node) => {
-      await connectionManager.disconnect((node as { connectionId: string }).connectionId);
+      const id = node
+        ? (node as { connectionId: string }).connectionId
+        : await pickServer(connectionManager, vscode.l10n.t('Select server to disconnect'));
+      if (!id) return;
+      await connectionManager.disconnect(id);
       treeProvider.refresh(node as Parameters<typeof treeProvider.refresh>[0]);
     }),
 
