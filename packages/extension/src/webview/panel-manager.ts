@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { randomUUID } from 'crypto';
+import { PASSWORD_KEY_PREFIX, PASSPHRASE_KEY_PREFIX } from '@ftpmanager/shared';
 import type { WebviewMessage } from '@ftpmanager/shared';
 import type { ConnectionManager } from '../services/connection-manager.js';
 import { FtpClient } from '../services/ftp-client.js';
@@ -91,10 +92,15 @@ export class WebviewPanelManager {
 
       case 'testConnection': {
         try {
+          // If editing an existing connection and password not re-entered, use stored password
+          const testPassword = msg.password
+            ?? (msg.config.id ? await this.context.secrets.get(PASSWORD_KEY_PREFIX + msg.config.id) : undefined);
+          const testPassphrase = msg.passphrase
+            ?? (msg.config.id ? await this.context.secrets.get(PASSPHRASE_KEY_PREFIX + msg.config.id) : undefined);
           const client =
             msg.config.protocol === 'sftp'
-              ? new SftpClient(msg.config, msg.password, msg.passphrase)
-              : new FtpClient(msg.config, msg.password);
+              ? new SftpClient(msg.config, testPassword, testPassphrase)
+              : new FtpClient(msg.config, testPassword);
           await client.connect();
           await client.disconnect();
           this.panel?.webview.postMessage({ type: 'connectionTestResult', success: true });

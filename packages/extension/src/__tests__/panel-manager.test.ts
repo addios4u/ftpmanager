@@ -88,6 +88,11 @@ function makeMockManager(connections: FtpConnectionInfo[] = []) {
 const mockContext = {
   extensionUri: { fsPath: '/ext' },
   subscriptions: [],
+  secrets: {
+    get: vi.fn(async () => undefined),
+    store: vi.fn(),
+    delete: vi.fn(),
+  },
 } as unknown as vscode.ExtensionContext;
 
 // ---------------------------------------------------------------------------

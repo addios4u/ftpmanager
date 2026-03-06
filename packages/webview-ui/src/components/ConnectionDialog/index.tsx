@@ -53,7 +53,7 @@ export function ConnectionDialog({ editId }: Props) {
   const handleTest = () => {
     setIsTesting(true);
     setTestResult(null);
-    postMessage({ type: 'testConnection', config, password, passphrase });
+    postMessage({ type: 'testConnection', config, password: password || undefined, passphrase: passphrase || undefined });
   };
 
   return (
