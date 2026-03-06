@@ -1,1 +1,17 @@
-{}
+{
+  "Connected": "Connected",
+  "Failed to connect \"{0}\": {1}": "Failed to connect \"{0}\": {1}",
+  "Failed to load directory: {0}": "Failed to load directory: {0}",
+  "Delete server \"{0}\"?": "Delete server \"{0}\"?",
+  "Delete": "Delete",
+  "Upload File": "Upload File",
+  "No active connection": "No active connection",
+  "Download": "Download",
+  "Download Folder Here": "Download Folder Here",
+  "New Folder": "New Folder",
+  "Enter folder name": "Enter folder name",
+  "Folder name": "Folder name",
+  "Rename": "Rename",
+  "Enter new name": "Enter new name",
+  "New name": "New name"
+}
