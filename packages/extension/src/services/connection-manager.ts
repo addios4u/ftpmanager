@@ -60,10 +60,10 @@ export class ConnectionManager {
     }
     await this.context.globalState.update(CONNECTIONS_KEY, connections);
 
-    if (password !== undefined) {
+    if (password) {
       await this.context.secrets.store(PASSWORD_KEY_PREFIX + config.id, password);
     }
-    if (passphrase !== undefined) {
+    if (passphrase) {
       await this.context.secrets.store(PASSPHRASE_KEY_PREFIX + config.id, passphrase);
     }
 

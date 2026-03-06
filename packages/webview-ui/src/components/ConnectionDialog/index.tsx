@@ -46,7 +46,7 @@ export function ConnectionDialog({ editId }: Props) {
 
   const handleSave = () => {
     if (!config.name.trim() || !config.host.trim()) return;
-    postMessage({ type: 'saveConnection', config, password, passphrase });
+    postMessage({ type: 'saveConnection', config, password: password || undefined, passphrase: passphrase || undefined });
     setViewState({ view: 'welcome' });
   };
 
