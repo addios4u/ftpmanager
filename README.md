@@ -7,6 +7,8 @@
 
 **FTPManager** is a VS Code / Cursor extension that brings FTP, FTPS, and SFTP file management directly into your editor. Connect to remote servers, browse directories, edit files, and transfer data — all without leaving your IDE.
 
+![FTP Manager - Server Management](screenshots/01.png)
+
 ---
 
 ## Supported Protocols
@@ -34,6 +36,8 @@
 ### Remote File Browser
 
 Browse your remote server from the Explorer sidebar with a lazy-loading tree view.
+
+![FTP Manager - Remote File Browser](screenshots/02.png)
 
 ```
 FTP Manager

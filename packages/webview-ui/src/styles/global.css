@@ -79,6 +79,12 @@ button.danger {
 .server-host { opacity: 0.6; font-size: 0.9em; flex: 1; }
 .server-actions { display: flex; gap: 6px; }
 
+.welcome-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
 .add-server-btn {
   padding: 8px 20px;
   background: var(--vscode-button-background);
@@ -88,6 +94,15 @@ button.danger {
   cursor: pointer;
   font-size: 1em;
 }
+button.coffee-btn {
+  font-size: 0.85em;
+  background: #FFDD00;
+  color: #000000;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-weight: 600;
+}
+button.coffee-btn:hover { opacity: 0.85; }
 
 /* Connection Dialog */
 .connection-dialog { max-width: 520px; margin: 0 auto; }

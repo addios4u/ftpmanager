@@ -38,12 +38,20 @@ export function WelcomeView() {
         </div>
       )}
 
-      <button
-        className="add-server-btn"
-        onClick={() => setViewState({ view: 'connectionDialog' })}
-      >
-        + Add Server
-      </button>
+      <div className="welcome-actions">
+        <button
+          className="add-server-btn"
+          onClick={() => setViewState({ view: 'connectionDialog' })}
+        >
+          + Add Server
+        </button>
+        <button
+          className="coffee-btn"
+          onClick={() => postMessage({ type: 'openExternal', url: 'https://buymeacoffee.com/addios4u' })}
+        >
+          ☕ Buy me a coffee
+        </button>
+      </div>
     </div>
   );
 }
