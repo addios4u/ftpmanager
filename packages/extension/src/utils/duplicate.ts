@@ -17,9 +17,10 @@ export function getUniqueCopyName(originalName: string, existingNames: string[])
   if (!existing.has(first)) return first;
 
   let n = 2;
-  while (true) {
+  while (n <= 10000) {
     const candidate = `${base}_copy_${n}${ext}`;
     if (!existing.has(candidate)) return candidate;
     n++;
   }
+  throw new Error(`Cannot generate a unique copy name for "${originalName}" (too many copies)`);
 }
