@@ -357,11 +357,12 @@ export function activate(context: vscode.ExtensionContext): void {
         async (progress) => {
           const tmpBase = path.join(os.tmpdir(), `ftpmanager-${randomUUID()}`);
           const tmpPath = path.join(tmpBase, baseName);
+          let destPath = '';
           try {
             const entries = await client.list(parentDir);
             const existingNames = entries.map((e) => e.name);
             const newName = getUniqueCopyName(baseName, existingNames);
-            const destPath = parentDir === '/' ? `/${newName}` : `${parentDir}/${newName}`;
+            destPath = parentDir === '/' ? `/${newName}` : `${parentDir}/${newName}`;
 
             await fs.mkdir(tmpBase, { recursive: true });
 
@@ -378,8 +379,17 @@ export function activate(context: vscode.ExtensionContext): void {
             vscode.window.showInformationMessage(vscode.l10n.t('Duplicated to: {0}', newName));
           } catch (err) {
             vscode.window.showErrorMessage(vscode.l10n.t('Failed to duplicate: {0}', String(err)));
-            // Note: destPath is scoped inside try, so best-effort remote cleanup is skipped.
-            // The error message is sufficient; partial uploads leaving a stale file is an acceptable trade-off.
+            if (destPath) {
+              try {
+                if (n.nodeType === 'file') {
+                  await client.delete(destPath);
+                } else {
+                  await client.rmdir(destPath, true);
+                }
+              } catch {
+                // best-effort cleanup of partial remote destination
+              }
+            }
           } finally {
             await fs.rm(tmpBase, { recursive: true, force: true });
           }
