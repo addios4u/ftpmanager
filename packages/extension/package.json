@@ -115,6 +115,11 @@
         "category": "%category.ftpManager%"
       },
       {
+        "command": "ftpmanager.duplicate",
+        "title": "%command.duplicate%",
+        "category": "%category.ftpManager%"
+      },
+      {
         "command": "ftpmanager.copyRemotePath",
         "title": "%command.copyRemotePath%",
         "category": "%category.ftpManager%"
@@ -225,6 +230,11 @@
           "command": "ftpmanager.rename",
           "when": "view == ftpmanager.servers && viewItem =~ /^file$|^directory$/",
           "group": "3_edit@1"
+        },
+        {
+          "command": "ftpmanager.duplicate",
+          "when": "view == ftpmanager.servers && viewItem =~ /^file$|^directory$/",
+          "group": "3_edit@1.5"
         },
         {
           "command": "ftpmanager.deleteRemote",
