@@ -17,5 +17,6 @@
   "command.copyRemotePath": "원격 경로 복사",
   "command.uploadToServer": "FTP 서버에 업로드",
   "command.openRemoteFile": "원격 파일 열기",
-  "command.searchFiles": "원격 파일 검색"
+  "command.searchFiles": "원격 파일 검색",
+  "command.duplicate": "복제"
 }

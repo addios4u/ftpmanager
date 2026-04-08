@@ -17,5 +17,6 @@
   "command.copyRemotePath": "Copy Remote Path",
   "command.uploadToServer": "Upload to FTP Server",
   "command.openRemoteFile": "Open Remote File",
-  "command.searchFiles": "Search Remote Files"
+  "command.searchFiles": "Search Remote Files",
+  "command.duplicate": "Duplicate"
 }

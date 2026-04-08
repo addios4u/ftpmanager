@@ -33,5 +33,10 @@
   "Searching: {0}": "Searching: {0}",
   "No files found for \"{0}\"": "No files found for \"{0}\"",
   "Search Results ({0} found)": "Search Results ({0} found)",
-  "Select a file to open": "Select a file to open"
+  "Select a file to open": "Select a file to open",
+  "Duplicating: {0}": "Duplicating: {0}",
+  "Downloading...": "Downloading...",
+  "Uploading...": "Uploading...",
+  "Duplicated to: {0}": "Duplicated to: {0}",
+  "Failed to duplicate: {0}": "Failed to duplicate: {0}"
 }
