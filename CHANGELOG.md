@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.0] - 2026-04-08
+
+### Added
+- **Duplicate** — right-click any remote file or folder to create a copy in the same directory (`_copy` suffix, auto-increments on conflict)
+- **Remote file search** — search remote files by name or content directly from the tree view
+- **OS drag-and-drop upload** — drag local files from Finder/Explorer onto the tree view to upload
+
 ## [1.0.0] - 2026-03-06
 
 ### Added

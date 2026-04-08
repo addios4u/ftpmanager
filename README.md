@@ -70,6 +70,7 @@ FTP Manager
 
 - **New Folder** — create directories on the remote server
 - **Rename** — rename remote files and folders
+- **Duplicate** — copy a file or folder in-place (`report.txt` → `report_copy.txt`); auto-increments on conflict
 - **Delete** — remove remote files and folders with confirmation
 - **Copy Path** — copy the full remote path to clipboard
 
