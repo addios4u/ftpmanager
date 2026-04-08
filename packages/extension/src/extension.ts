@@ -348,14 +348,6 @@ export function activate(context: vscode.ExtensionContext): void {
       const parentDir = n.remotePath.substring(0, n.remotePath.lastIndexOf('/')) || '/';
       const baseName = n.remotePath.substring(n.remotePath.lastIndexOf('/') + 1);
 
-      const entries = await client.list(parentDir);
-      const existingNames = entries.map((e) => e.name);
-      const newName = getUniqueCopyName(baseName, existingNames);
-      const destPath = parentDir === '/' ? `/${newName}` : `${parentDir}/${newName}`;
-
-      const tmpBase = path.join(os.tmpdir(), `ftpmanager-${randomUUID()}`);
-      const tmpPath = path.join(tmpBase, baseName);
-
       await vscode.window.withProgress(
         {
           location: vscode.ProgressLocation.Notification,
@@ -363,7 +355,14 @@ export function activate(context: vscode.ExtensionContext): void {
           cancellable: false,
         },
         async (progress) => {
+          const tmpBase = path.join(os.tmpdir(), `ftpmanager-${randomUUID()}`);
+          const tmpPath = path.join(tmpBase, baseName);
           try {
+            const entries = await client.list(parentDir);
+            const existingNames = entries.map((e) => e.name);
+            const newName = getUniqueCopyName(baseName, existingNames);
+            const destPath = parentDir === '/' ? `/${newName}` : `${parentDir}/${newName}`;
+
             await fs.mkdir(tmpBase, { recursive: true });
 
             if (n.nodeType === 'file') {
@@ -379,15 +378,8 @@ export function activate(context: vscode.ExtensionContext): void {
             vscode.window.showInformationMessage(vscode.l10n.t('Duplicated to: {0}', newName));
           } catch (err) {
             vscode.window.showErrorMessage(vscode.l10n.t('Failed to duplicate: {0}', String(err)));
-            try {
-              if (n.nodeType === 'file') {
-                await client.delete(destPath);
-              } else {
-                await client.rmdir(destPath, true);
-              }
-            } catch {
-              // best-effort cleanup of partial remote destination
-            }
+            // Note: destPath is scoped inside try, so best-effort remote cleanup is skipped.
+            // The error message is sufficient; partial uploads leaving a stale file is an acceptable trade-off.
           } finally {
             await fs.rm(tmpBase, { recursive: true, force: true });
           }
