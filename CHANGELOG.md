@@ -1,6 +1,6 @@
 # Changelog
 
-## [1.1.0] - 2026-04-08
+## [1.2.0] - 2026-04-08
 
 ### Added
 - **Duplicate** — right-click any remote file or folder to create a copy in the same directory (`_copy` suffix, auto-increments on conflict)
