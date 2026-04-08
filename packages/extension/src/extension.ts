@@ -7,6 +7,10 @@ import { FtpFileSystemProvider } from './providers/ftp-fs-provider.js';
 import { COMMAND_IDS, VIEW_IDS } from '@ftpmanager/shared';
 import { searchByName, searchByContent } from './services/search-service.js';
 import type { SearchResult } from './services/search-service.js';
+import * as os from 'os';
+import * as fs from 'fs/promises';
+import { randomUUID } from 'crypto';
+import { getUniqueCopyName } from './utils/duplicate.js';
 
 let connectionManager: ConnectionManager;
 let treeProvider: FtpTreeProvider;
@@ -331,6 +335,66 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.commands.registerCommand(COMMAND_IDS.COPY_REMOTE_PATH, (node) => {
       const n = node as { remotePath: string };
       void vscode.env.clipboard.writeText(n.remotePath);
+    }),
+
+    vscode.commands.registerCommand(COMMAND_IDS.DUPLICATE, async (node) => {
+      const n = node as { connectionId: string; remotePath: string; nodeType: string; label: string };
+      const client = connectionManager.getClient(n.connectionId);
+      if (!client) {
+        vscode.window.showErrorMessage(vscode.l10n.t('No active connection'));
+        return;
+      }
+
+      const parentDir = n.remotePath.substring(0, n.remotePath.lastIndexOf('/')) || '/';
+      const baseName = n.remotePath.substring(n.remotePath.lastIndexOf('/') + 1);
+
+      const entries = await client.list(parentDir);
+      const existingNames = entries.map((e) => e.name);
+      const newName = getUniqueCopyName(baseName, existingNames);
+      const destPath = parentDir === '/' ? `/${newName}` : `${parentDir}/${newName}`;
+
+      const tmpBase = path.join(os.tmpdir(), `ftpmanager-${randomUUID()}`);
+      const tmpPath = path.join(tmpBase, baseName);
+
+      await vscode.window.withProgress(
+        {
+          location: vscode.ProgressLocation.Notification,
+          title: vscode.l10n.t('Duplicating: {0}', baseName),
+          cancellable: false,
+        },
+        async (progress) => {
+          try {
+            await fs.mkdir(tmpBase, { recursive: true });
+
+            if (n.nodeType === 'file') {
+              await client.downloadFile(n.remotePath, tmpPath);
+              await client.uploadFile(tmpPath, destPath);
+            } else {
+              progress.report({ message: vscode.l10n.t('Downloading...') });
+              await client.downloadFolder(n.remotePath, tmpPath);
+              progress.report({ message: vscode.l10n.t('Uploading...') });
+              await client.uploadFolder(tmpPath, destPath);
+            }
+
+            vscode.window.showInformationMessage(vscode.l10n.t('Duplicated to: {0}', newName));
+          } catch (err) {
+            vscode.window.showErrorMessage(vscode.l10n.t('Failed to duplicate: {0}', String(err)));
+            try {
+              if (n.nodeType === 'file') {
+                await client.delete(destPath);
+              } else {
+                await client.rmdir(destPath, true);
+              }
+            } catch {
+              // best-effort cleanup of partial remote destination
+            }
+          } finally {
+            await fs.rm(tmpBase, { recursive: true, force: true });
+          }
+        },
+      );
+
+      treeProvider.refresh();
     }),
 
     vscode.commands.registerCommand(COMMAND_IDS.SEARCH_FILES, async (node?: unknown) => {
