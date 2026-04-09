@@ -425,6 +425,27 @@ export function activate(context: vscode.ExtensionContext): void {
       treeProvider.refresh();
     }),
 
+    vscode.commands.registerCommand(COMMAND_IDS.CHMOD, async (node) => {
+      const n = node as { connectionId: string; remotePath: string };
+
+      const client = connectionManager.getClient(n.connectionId);
+      if (!client) {
+        vscode.window.showErrorMessage(vscode.l10n.t('No active connection'));
+        return;
+      }
+
+      const perms = await pickPermissions();
+      if (!perms) return;
+
+      await client.chmod(n.remotePath, perms).catch((err) => {
+        vscode.window.showErrorMessage(
+          vscode.l10n.t('Failed to change permissions: {0}', err instanceof Error ? err.message : String(err)),
+        );
+      });
+
+      treeProvider.refresh(node as Parameters<typeof treeProvider.refresh>[0]);
+    }),
+
     vscode.commands.registerCommand(COMMAND_IDS.SEARCH_FILES, async (node?: unknown) => {
       const n = node as { connectionId?: string } | undefined;
       let connectionId = n?.connectionId;
