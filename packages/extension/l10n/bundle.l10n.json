@@ -38,5 +38,15 @@
   "Downloading...": "Downloading...",
   "Uploading...": "Uploading...",
   "Duplicated to: {0}": "Duplicated to: {0}",
-  "Failed to duplicate: {0}": "Failed to duplicate: {0}"
+  "Failed to duplicate: {0}": "Failed to duplicate: {0}",
+  "Select file permissions": "Select file permissions",
+  "Default file": "Default file",
+  "Group writable": "Group writable",
+  "Executable script": "Executable script",
+  "Private file": "Private file",
+  "Custom...": "Custom...",
+  "Skip (use server default)": "Skip (use server default)",
+  "Custom permissions": "Custom permissions",
+  "Enter permissions (e.g. 644)": "Enter permissions (e.g. 644)",
+  "Enter 3 or 4 digits (e.g. 644, 0644)": "Enter 3 or 4 digits (e.g. 644, 0644)"
 }
