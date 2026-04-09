@@ -18,5 +18,6 @@
   "command.uploadToServer": "Upload to FTP Server",
   "command.openRemoteFile": "Open Remote File",
   "command.searchFiles": "Search Remote Files",
-  "command.duplicate": "Duplicate"
+  "command.duplicate": "Duplicate",
+  "command.chmod": "Change Permissions"
 }

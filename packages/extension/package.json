@@ -125,6 +125,11 @@
         "category": "%category.ftpManager%"
       },
       {
+        "command": "ftpmanager.chmod",
+        "title": "%command.chmod%",
+        "category": "%category.ftpManager%"
+      },
+      {
         "command": "ftpmanager.uploadToServer",
         "title": "%command.uploadToServer%",
         "icon": "$(cloud-upload)",
@@ -245,6 +250,11 @@
           "command": "ftpmanager.copyRemotePath",
           "when": "view == ftpmanager.servers && viewItem =~ /^file$|^directory$/",
           "group": "4_misc@1"
+        },
+        {
+          "command": "ftpmanager.chmod",
+          "when": "view == ftpmanager.servers && viewItem =~ /^file$|^directory$/",
+          "group": "9_chmod@1"
         }
       ],
       "explorer/context": [

@@ -48,5 +48,7 @@
   "Skip (use server default)": "Skip (use server default)",
   "Custom permissions": "Custom permissions",
   "Enter permissions (e.g. 644)": "Enter permissions (e.g. 644)",
-  "Enter 3 or 4 digits (e.g. 644, 0644)": "Enter 3 or 4 digits (e.g. 644, 0644)"
+  "Enter 3 or 4 digits (e.g. 644, 0644)": "Enter 3 or 4 digits (e.g. 644, 0644)",
+  "Change Permissions": "Change Permissions",
+  "Failed to change permissions: {0}": "Failed to change permissions: {0}"
 }
