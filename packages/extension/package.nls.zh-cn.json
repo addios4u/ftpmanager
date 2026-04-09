@@ -18,5 +18,6 @@
   "command.uploadToServer": "上传到 FTP 服务器",
   "command.openRemoteFile": "打开远程文件",
   "command.searchFiles": "搜索远程文件",
-  "command.duplicate": "复制"
+  "command.duplicate": "复制",
+  "command.chmod": "更改权限"
 }

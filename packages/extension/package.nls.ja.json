@@ -18,5 +18,6 @@
   "command.uploadToServer": "FTP サーバーにアップロード",
   "command.openRemoteFile": "リモートファイルを開く",
   "command.searchFiles": "リモートファイルを検索",
-  "command.duplicate": "複製"
+  "command.duplicate": "複製",
+  "command.chmod": "権限を変更"
 }
