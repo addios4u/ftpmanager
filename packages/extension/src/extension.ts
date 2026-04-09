@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import { ConnectionManager } from './services/connection-manager.js';
-import { FtpTreeProvider } from './providers/ftp-tree.js';
+import { FtpTreeProvider, type FtpTreeNode } from './providers/ftp-tree.js';
 import { WebviewPanelManager } from './webview/panel-manager.js';
 import { FtpFileSystemProvider } from './providers/ftp-fs-provider.js';
 import { COMMAND_IDS, VIEW_IDS } from '@ftpmanager/shared';
@@ -426,7 +426,7 @@ export function activate(context: vscode.ExtensionContext): void {
     }),
 
     vscode.commands.registerCommand(COMMAND_IDS.CHMOD, async (node) => {
-      const n = node as { connectionId: string; remotePath: string };
+      const n = node as FtpTreeNode;
 
       const client = connectionManager.getClient(n.connectionId);
       if (!client) {
@@ -437,13 +437,23 @@ export function activate(context: vscode.ExtensionContext): void {
       const perms = await pickPermissions();
       if (!perms) return;
 
-      await client.chmod(n.remotePath, perms).catch((err) => {
+      let succeeded = false;
+      await client.chmod(n.remotePath, perms).then(() => {
+        succeeded = true;
+      }).catch((err) => {
         vscode.window.showErrorMessage(
           vscode.l10n.t('Failed to change permissions: {0}', err instanceof Error ? err.message : String(err)),
         );
       });
 
-      treeProvider.refresh(node as Parameters<typeof treeProvider.refresh>[0]);
+      if (succeeded) {
+        n.permissions = perms;
+        vscode.window.showInformationMessage(
+          vscode.l10n.t('Changed permissions of "{0}" to {1}', path.basename(n.remotePath), perms),
+        );
+      }
+
+      treeProvider.refresh(n);
     }),
 
     vscode.commands.registerCommand(COMMAND_IDS.SEARCH_FILES, async (node?: unknown) => {
