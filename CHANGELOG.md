@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.3] - 2026-04-09
+
+### Fixed
+- **FTP/FTPS keepalive** — Added NOOP keepalive for FTP/FTPS connections. A `NOOP` command is sent automatically after 25 seconds of inactivity to prevent the server from closing the idle connection.
+- **SFTP keepalive** — Enabled SSH2 `keepaliveInterval` (25s) for SFTP connections to prevent the same idle disconnect issue.
+- **Auto-reconnect on stale connection** — All file operations (save, open, list, delete, rename, etc.) now detect a dropped connection and automatically reconnect and retry, so users no longer need to manually reconnect after an idle disconnect.
+
 ## [1.2.2] - 2026-04-09
 
 ### Added

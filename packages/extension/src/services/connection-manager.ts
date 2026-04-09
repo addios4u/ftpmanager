@@ -146,6 +146,17 @@ export class ConnectionManager {
     throw lastErr;
   }
 
+  async reconnect(id: string): Promise<void> {
+    const client = this.clients.get(id);
+    if (client) {
+      try { await client.disconnect(); } catch { /* ignore */ }
+      this.clients.delete(id);
+    }
+    this.connectedIds.delete(id);
+    this._onDidChangeConnectionState.fire({ connectionId: id, connected: false });
+    await this.connect(id);
+  }
+
   async disconnect(id: string): Promise<void> {
     const client = this.clients.get(id);
     if (client) {

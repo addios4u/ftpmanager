@@ -26,6 +26,8 @@ export class SftpClient implements IFtpClient {
       port: this.config.port,
       username: this.config.username,
       readyTimeout: 15_000,
+      keepaliveInterval: 25_000,  // send SSH keepalive every 25s to prevent idle disconnect
+      keepaliveCountMax: 3,
     };
 
     if (this.config.privateKeyPath) {

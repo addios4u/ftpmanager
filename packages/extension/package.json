@@ -2,7 +2,7 @@
   "name": "ftpmanager",
   "displayName": "FTPManager",
   "description": "FTP/SFTP client for VS Code - connect, browse, edit and transfer files on remote servers",
-  "version": "1.2.2",
+  "version": "1.2.3",
   "publisher": "addios4u",
   "license": "MIT",
   "repository": {

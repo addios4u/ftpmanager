@@ -106,6 +106,8 @@ async function enterPassiveModeNatSafe(ftp: FTPContext): Promise<{ code: number;
 export class FtpClient implements IFtpClient {
   private client: BasicFtpClient;
   private _lock: Promise<void> = Promise.resolve();
+  private _keepaliveTimer: ReturnType<typeof setInterval> | undefined;
+  private _lastOpTime = 0;
 
   constructor(
     private readonly config: FtpConnectionConfig,
@@ -121,10 +123,30 @@ export class FtpClient implements IFtpClient {
     let release!: () => void;
     this._lock = new Promise<void>((resolve) => { release = resolve; });
     await current;
+    this._lastOpTime = Date.now();
     try {
       return await fn();
     } finally {
       release();
+    }
+  }
+
+  private startKeepalive(): void {
+    this._lastOpTime = Date.now();
+    // Check every 10s; send NOOP only when idle for >25s to prevent server-side idle disconnect
+    this._keepaliveTimer = setInterval(() => {
+      if (Date.now() - this._lastOpTime >= 25_000) {
+        void this.withLock(async () => {
+          try { await this.client.send('NOOP'); } catch { /* ignore — client may have closed */ }
+        }).catch(() => {});
+      }
+    }, 10_000);
+  }
+
+  private stopKeepalive(): void {
+    if (this._keepaliveTimer !== undefined) {
+      clearInterval(this._keepaliveTimer);
+      this._keepaliveTimer = undefined;
     }
   }
 
@@ -148,16 +170,21 @@ export class FtpClient implements IFtpClient {
       secure: !!(this.config.protocol === 'ftps' || this.config.secure),
       secureOptions: this.config.protocol === 'ftps' ? { rejectUnauthorized: false } : undefined,
     });
-    if (!signal) { await accessPromise; return; }
-    await Promise.race([
-      accessPromise,
-      new Promise<never>((_, reject) =>
-        signal.addEventListener('abort', () => { this.client.close(); reject(new Error('Cancelled')); }, { once: true }),
-      ),
-    ]);
+    if (!signal) {
+      await accessPromise;
+    } else {
+      await Promise.race([
+        accessPromise,
+        new Promise<never>((_, reject) =>
+          signal.addEventListener('abort', () => { this.client.close(); reject(new Error('Cancelled')); }, { once: true }),
+        ),
+      ]);
+    }
+    this.startKeepalive();
   }
 
   async disconnect(): Promise<void> {
+    this.stopKeepalive();
     this.client.close();
   }
 
