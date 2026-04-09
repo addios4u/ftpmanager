@@ -282,12 +282,12 @@ export function activate(context: vscode.ExtensionContext): void {
         return;
       }
 
+      const perms = await pickPermissions();
+
       const newPath = n.remotePath.endsWith('/')
         ? n.remotePath + name
         : n.remotePath + '/' + name;
       await client.putContent(Buffer.alloc(0), newPath);
-
-      const perms = await pickPermissions();
       if (perms) {
         await client.chmod(newPath, perms).catch(() => {});
       }
