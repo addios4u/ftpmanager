@@ -158,6 +158,8 @@ export function activate(context: vscode.ExtensionContext): void {
         return;
       }
 
+      const perms = await pickPermissions();
+
       await vscode.window.withProgress(
         {
           location: vscode.ProgressLocation.Notification,
@@ -172,6 +174,9 @@ export function activate(context: vscode.ExtensionContext): void {
               ? n.remotePath + fileName
               : n.remotePath + '/' + fileName;
             await client.uploadFile(file.fsPath, remoteDest);
+            if (perms) {
+              await client.chmod(remoteDest, perms).catch(() => {});
+            }
           }
         },
       );
@@ -540,6 +545,8 @@ export function activate(context: vscode.ExtensionContext): void {
         ? server.remotePath + fileName
         : server.remotePath + '/' + fileName;
 
+      const perms = await pickPermissions();
+
       await vscode.window.withProgress(
         {
           location: vscode.ProgressLocation.Notification,
@@ -548,6 +555,9 @@ export function activate(context: vscode.ExtensionContext): void {
         },
         async () => {
           await client.uploadFile(uri.fsPath, remoteDest);
+          if (perms) {
+            await client.chmod(remoteDest, perms).catch(() => {});
+          }
         },
       );
       vscode.window.showInformationMessage(`Uploaded to ${server.name}: ${remoteDest}`);
