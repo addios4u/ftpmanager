@@ -65,7 +65,7 @@ export async function pickPermissions(): Promise<string | undefined> {
       placeHolder: '644',
       ignoreFocusOut: true,
       validateInput: (v) =>
-        /^\d{3,4}$/.test(v.trim()) ? null : vscode.l10n.t('Enter 3 or 4 digits (e.g. 644, 0644)'),
+        /^[0-7]{3,4}$/.test(v.trim()) ? null : vscode.l10n.t('Enter 3 or 4 digits (e.g. 644, 0644)'),
     });
     return custom?.trim() || undefined;
   }
