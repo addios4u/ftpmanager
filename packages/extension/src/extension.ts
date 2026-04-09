@@ -11,6 +11,7 @@ import * as os from 'os';
 import * as fs from 'fs/promises';
 import { randomUUID } from 'crypto';
 import { getUniqueCopyName } from './utils/duplicate.js';
+import { collectPermissions } from './utils/permissions.js';
 
 let connectionManager: ConnectionManager;
 let treeProvider: FtpTreeProvider;
@@ -360,6 +361,7 @@ export function activate(context: vscode.ExtensionContext): void {
           let destPath = '';
           try {
             const entries = await client.list(parentDir);
+            const sourceEntry = entries.find((e) => e.name === baseName);
             const existingNames = entries.map((e) => e.name);
             const newName = getUniqueCopyName(baseName, existingNames);
             destPath = parentDir === '/' ? `/${newName}` : `${parentDir}/${newName}`;
@@ -369,11 +371,23 @@ export function activate(context: vscode.ExtensionContext): void {
             if (n.nodeType === 'file') {
               await client.downloadFile(n.remotePath, tmpPath);
               await client.uploadFile(tmpPath, destPath);
+              if (sourceEntry?.permissions) {
+                await client.chmod(destPath, sourceEntry.permissions).catch(() => {});
+              }
             } else {
+              // 업로드 전에 원본 폴더의 퍼미션 맵 수집
+              const permMap = await collectPermissions(client, n.remotePath).catch(() => new Map<string, string>());
+
               progress.report({ message: vscode.l10n.t('Downloading...') });
               await client.downloadFolder(n.remotePath, tmpPath);
               progress.report({ message: vscode.l10n.t('Uploading...') });
               await client.uploadFolder(tmpPath, destPath);
+
+              // 수집된 퍼미션을 복사본에 재귀 적용
+              for (const [relPath, perms] of permMap) {
+                const target = relPath ? `${destPath}/${relPath}` : destPath;
+                await client.chmod(target, perms).catch(() => {});
+              }
             }
 
             vscode.window.showInformationMessage(vscode.l10n.t('Duplicated to: {0}', newName));

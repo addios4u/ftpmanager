@@ -17,6 +17,7 @@ const mockSftpClient = {
   rename: vi.fn(),
   get: vi.fn(async () => Buffer.from('content')),
   put: vi.fn(),
+  chmod: vi.fn(async () => 'ok'),
 };
 
 vi.mock('ssh2-sftp-client', () => ({
@@ -171,7 +172,7 @@ describe('SftpClient', () => {
       ]);
       const client = new SftpClient(makeConfig());
       const [entry] = await client.list('/');
-      expect(entry.permissions).toBe('rwxr-xr--');
+      expect(entry.permissions).toBe('754');
     });
 
     it('should handle undefined rights gracefully', async () => {
@@ -297,6 +298,33 @@ describe('SftpClient', () => {
       const content = Buffer.from('upload content');
       await client.putContent(content, '/remote/file.txt');
       expect(mockSftpClient.put).toHaveBeenCalledWith(content, '/remote/file.txt');
+    });
+  });
+
+  // ── chmod() ────────────────────────────────────────────────────────────────
+  describe('chmod()', () => {
+    it('should call client.chmod with octal mode number', async () => {
+      const client = new SftpClient(makeConfig());
+      await client.chmod('/remote/file.txt', '644');
+      expect(mockSftpClient.chmod).toHaveBeenCalledWith('/remote/file.txt', 0o644);
+    });
+
+    it('should convert "755" to 0o755', async () => {
+      const client = new SftpClient(makeConfig());
+      await client.chmod('/remote/dir', '755');
+      expect(mockSftpClient.chmod).toHaveBeenCalledWith('/remote/dir', 0o755);
+    });
+
+    it('should not call client.chmod when permissions is invalid (NaN guard)', async () => {
+      const client = new SftpClient(makeConfig());
+      await client.chmod('/remote/file.txt', 'abc');
+      expect(mockSftpClient.chmod).not.toHaveBeenCalled();
+    });
+
+    it('should not call client.chmod for empty string', async () => {
+      const client = new SftpClient(makeConfig());
+      await client.chmod('/remote/file.txt', '');
+      expect(mockSftpClient.chmod).not.toHaveBeenCalled();
     });
   });
 });

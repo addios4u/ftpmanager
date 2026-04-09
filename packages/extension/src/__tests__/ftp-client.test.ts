@@ -16,6 +16,7 @@ const mockFtpClient = {
   remove: vi.fn(),
   removeDir: vi.fn(),
   rename: vi.fn(),
+  send: vi.fn(async () => ({ code: 200, message: 'OK' })),
 };
 
 vi.mock('basic-ftp', () => ({
@@ -169,6 +170,64 @@ describe('FtpClient', () => {
       const client = new FtpClient(makeConfig());
       const [entry] = await client.list('/');
       expect(entry.modifiedAt).toEqual(new Date(0));
+    });
+
+    it('should convert UnixPermissions object to octal string', async () => {
+      mockFtpClient.list.mockResolvedValue([
+        makeFileInfo({ permissions: { user: 6, group: 4, world: 4 } }),
+      ]);
+      const client = new FtpClient(makeConfig());
+      const [entry] = await client.list('/');
+      expect(entry.permissions).toBe('644');
+    });
+
+    it('should convert UnixPermissions 755 correctly', async () => {
+      mockFtpClient.list.mockResolvedValue([
+        makeFileInfo({ permissions: { user: 7, group: 5, world: 5 } }),
+      ]);
+      const client = new FtpClient(makeConfig());
+      const [entry] = await client.list('/');
+      expect(entry.permissions).toBe('755');
+    });
+
+    it('should return undefined permissions when not provided', async () => {
+      mockFtpClient.list.mockResolvedValue([makeFileInfo({ permissions: undefined })]);
+      const client = new FtpClient(makeConfig());
+      const [entry] = await client.list('/');
+      expect(entry.permissions).toBeUndefined();
+    });
+  });
+
+  // ── chmod() ────────────────────────────────────────────────────────────────
+  describe('chmod()', () => {
+    it('should send SITE CHMOD command with permissions and path', async () => {
+      const client = new FtpClient(makeConfig());
+      await client.chmod('/remote/file.txt', '644');
+      expect(mockFtpClient.send).toHaveBeenCalledWith('SITE CHMOD 644 /remote/file.txt');
+    });
+
+    it('should send SITE CHMOD for directory permissions', async () => {
+      const client = new FtpClient(makeConfig());
+      await client.chmod('/remote/dir', '755');
+      expect(mockFtpClient.send).toHaveBeenCalledWith('SITE CHMOD 755 /remote/dir');
+    });
+
+    it('should silently ignore send errors (server may not support SITE CHMOD)', async () => {
+      mockFtpClient.send.mockRejectedValueOnce(new Error('500 Unknown command'));
+      const client = new FtpClient(makeConfig());
+      await expect(client.chmod('/remote/file.txt', '644')).resolves.toBeUndefined();
+    });
+
+    it('should not send command for invalid permissions (injection guard)', async () => {
+      const client = new FtpClient(makeConfig());
+      await client.chmod('/remote/file.txt', 'abc');
+      expect(mockFtpClient.send).not.toHaveBeenCalled();
+    });
+
+    it('should not send command for permissions with CRLF', async () => {
+      const client = new FtpClient(makeConfig());
+      await client.chmod('/remote/file.txt', '644\r\nDELE /important');
+      expect(mockFtpClient.send).not.toHaveBeenCalled();
     });
   });
 

@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.2.1] - 2026-04-09
+
+### Fixed
+- **Permission preservation on edit** — Unix file permissions (chmod) are now restored after saving a remote file edited in VS Code
+- **Permission preservation on duplicate** — Duplicated files and folders now inherit the same permissions as the source (folders apply permissions recursively to all children)
+- **FTP permission parsing bug** — `UnixPermissions` object was incorrectly serialized as `"[object Object]"`; now correctly formatted as an octal string (e.g. `"644"`)
+- **SFTP permission format alignment** — SFTP symbolic permissions (e.g. `"rwxr-xr-x"`) are now normalized to the same octal format as FTP (e.g. `"755"`)
+- **SITE CHMOD injection guard** — FTP `chmod` now validates the permissions value before sending the `SITE CHMOD` command
+
 ## [1.2.0] - 2026-04-08
 
 ### Added

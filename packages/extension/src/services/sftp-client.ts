@@ -4,6 +4,11 @@ import SftpClientLib from 'ssh2-sftp-client';
 import type { FtpConnectionConfig, RemoteFileEntry } from '@ftpmanager/shared';
 import type { IFtpClient } from './ftp-client.js';
 
+/** "rwx" 형식 심볼릭 퍼미션 → 8진수 숫자 (0-7) */
+function rightsToOctal(rights: string): number {
+  return (rights.includes('r') ? 4 : 0) + (rights.includes('w') ? 2 : 0) + (rights.includes('x') ? 1 : 0);
+}
+
 export class SftpClient implements IFtpClient {
   private client: SftpClientLib;
 
@@ -55,7 +60,7 @@ export class SftpClient implements IFtpClient {
       size: item.size,
       modifiedAt: new Date(item.modifyTime),
       permissions: item.rights
-        ? `${item.rights.user}${item.rights.group}${item.rights.other}`
+        ? `${rightsToOctal(item.rights.user)}${rightsToOctal(item.rights.group)}${rightsToOctal(item.rights.other)}`
         : undefined,
     }));
   }
@@ -116,5 +121,11 @@ export class SftpClient implements IFtpClient {
 
   async putContent(content: Buffer, remotePath: string): Promise<void> {
     await this.client.put(content, remotePath);
+  }
+
+  async chmod(remotePath: string, permissions: string): Promise<void> {
+    const mode = parseInt(permissions, 8); // "644" → 0o644
+    if (isNaN(mode)) return;
+    await this.client.chmod(remotePath, mode);
   }
 }

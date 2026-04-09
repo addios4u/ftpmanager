@@ -36,6 +36,8 @@ function makeMockClient(overrides: Partial<IFtpClient> = {}): IFtpClient {
     rename: vi.fn(),
     getContent: vi.fn(async () => Buffer.from('hello')),
     putContent: vi.fn(),
+    pwd: vi.fn(),
+    chmod: vi.fn(async () => {}),
     ...overrides,
   };
 }

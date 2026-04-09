@@ -68,13 +68,32 @@ export class FtpFileSystemProvider implements vscode.FileSystemProvider {
   async writeFile(
     uri: vscode.Uri,
     content: Uint8Array,
-    _options: { create: boolean; overwrite: boolean },
+    options: { create: boolean; overwrite: boolean },
   ): Promise<void> {
     const { connectionId, remotePath } = this.parseUri(uri);
     const client = this.connectionManager.getClient(connectionId);
     if (!client) throw vscode.FileSystemError.Unavailable(uri);
 
+    // 기존 파일이 있을 수 있는 경우에만 퍼미션 조회
+    // create:false(덮어쓰기 전용) 또는 create:true,overwrite:true(기존 파일 덮어쓰기 허용) 모두 해당
+    let originalPerms: string | undefined;
+    if (!options.create || options.overwrite) {
+      try {
+        const parentDir = path.posix.dirname(remotePath);
+        const fileName = path.posix.basename(remotePath);
+        const entries = await client.list(parentDir);
+        originalPerms = entries.find((e) => e.name === fileName)?.permissions;
+      } catch {
+        // 조회 실패 시 퍼미션 없이 계속 진행
+      }
+    }
+
     await client.putContent(Buffer.from(content), remotePath);
+
+    if (originalPerms) {
+      await client.chmod(remotePath, originalPerms).catch(() => {});
+    }
+
     this._onDidChangeFile.fire([{ type: vscode.FileChangeType.Changed, uri }]);
   }
 

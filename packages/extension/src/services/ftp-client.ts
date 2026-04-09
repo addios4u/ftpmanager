@@ -22,6 +22,8 @@ export interface IFtpClient {
   getContent(remotePath: string): Promise<Buffer>;
   putContent(content: Buffer, remotePath: string): Promise<void>;
   pwd(): Promise<string>;
+  /** 퍼미션 적용. permissions는 "644", "755" 등 8진수 문자열. 미지원 서버에서는 무시됨. */
+  chmod(remotePath: string, permissions: string): Promise<void>;
 }
 
 function mapFileInfo(info: FileInfo): RemoteFileEntry {
@@ -30,7 +32,9 @@ function mapFileInfo(info: FileInfo): RemoteFileEntry {
     type: info.isDirectory ? 'directory' : info.isSymbolicLink ? 'symlink' : 'file',
     size: info.size,
     modifiedAt: info.modifiedAt ?? new Date(0),
-    permissions: info.permissions ? String(info.permissions) : undefined,
+    permissions: info.permissions
+      ? `${info.permissions.user}${info.permissions.group}${info.permissions.world}`
+      : undefined,
   };
 }
 
@@ -200,6 +204,18 @@ export class FtpClient implements IFtpClient {
 
   async pwd(): Promise<string> {
     return this.withLock(() => this.client.pwd());
+  }
+
+  async chmod(remotePath: string, permissions: string): Promise<void> {
+    // 퍼미션은 순수 숫자 3~4자리여야 함 — CRLF 인젝션 방지
+    if (!/^\d{3,4}$/.test(permissions)) return;
+    return this.withLock(async () => {
+      try {
+        await this.client.send(`SITE CHMOD ${permissions} ${remotePath}`);
+      } catch {
+        // SITE CHMOD 미지원 서버는 무시
+      }
+    });
   }
 
   async getContent(remotePath: string): Promise<Buffer> {
