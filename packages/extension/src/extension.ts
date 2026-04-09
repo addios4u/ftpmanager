@@ -12,6 +12,7 @@ import * as fs from 'fs/promises';
 import { randomUUID } from 'crypto';
 import { getUniqueCopyName } from './utils/duplicate.js';
 import { collectPermissions } from './utils/permissions.js';
+import { pickPermissions } from './utils/pick-permissions.js';
 
 let connectionManager: ConnectionManager;
 let treeProvider: FtpTreeProvider;
@@ -280,6 +281,12 @@ export function activate(context: vscode.ExtensionContext): void {
         ? n.remotePath + name
         : n.remotePath + '/' + name;
       await client.putContent(Buffer.alloc(0), newPath);
+
+      const perms = await pickPermissions();
+      if (perms) {
+        await client.chmod(newPath, perms).catch(() => {});
+      }
+
       treeProvider.refresh(node as Parameters<typeof treeProvider.refresh>[0]);
 
       const uri = vscode.Uri.parse(`ftpmanager://${n.connectionId}${newPath}`);
