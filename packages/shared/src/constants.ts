@@ -21,6 +21,7 @@ export const COMMAND_IDS = {
   OPEN_REMOTE_FILE: 'ftpmanager.openRemoteFile',
   SEARCH_FILES: 'ftpmanager.searchFiles',
   DUPLICATE: 'ftpmanager.duplicate',
+  CHMOD: 'ftpmanager.chmod',
 } as const;
 
 export const DEFAULT_PORTS: Record<string, number> = {

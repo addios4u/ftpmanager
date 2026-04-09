@@ -19,6 +19,7 @@ export interface FtpTreeNode {
   label: string;
   connectionId: string;
   remotePath: string;
+  permissions?: string;
 }
 
 function getContextValue(node: FtpTreeNode, connectionManager: ConnectionManager): string {
@@ -138,6 +139,10 @@ export class FtpTreeProvider
       item.id = `${node.connectionId}-${gen}`;
       const connected = this.connectionManager.isConnected(node.connectionId);
       item.description = connected ? vscode.l10n.t('Connected') : '';
+    }
+
+    if ((node.nodeType === 'file' || node.nodeType === 'directory') && node.permissions) {
+      item.description = `(${node.permissions})`;
     }
 
     if (node.nodeType === 'file') {
@@ -307,6 +312,7 @@ export class FtpTreeProvider
         label: entry.name,
         connectionId,
         remotePath: remotePath.endsWith('/') ? remotePath + entry.name : remotePath + '/' + entry.name,
+        permissions: entry.permissions,
       }));
   }
 

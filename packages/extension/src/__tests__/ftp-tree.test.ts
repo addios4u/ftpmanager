@@ -189,4 +189,45 @@ describe('FtpTreeProvider', () => {
 
     expect(mockClient.uploadFile).toHaveBeenCalledWith('/local/test.php', '/public_html/test.php');
   });
+
+  it('getTreeItem sets description to "(644)" for file node with permissions', () => {
+    const mgr = makeMockManager();
+    const provider = new FtpTreeProvider(mgr, fakeUri as never);
+    const node: FtpTreeNode = {
+      nodeType: 'file',
+      label: 'index.php',
+      connectionId: 'conn1',
+      remotePath: '/index.php',
+      permissions: '644',
+    };
+    const item = provider.getTreeItem(node);
+    expect(item.description).toBe('(644)');
+  });
+
+  it('getTreeItem sets description to "(755)" for directory node with permissions', () => {
+    const mgr = makeMockManager();
+    const provider = new FtpTreeProvider(mgr, fakeUri as never);
+    const node: FtpTreeNode = {
+      nodeType: 'directory',
+      label: 'assets',
+      connectionId: 'conn1',
+      remotePath: '/assets',
+      permissions: '755',
+    };
+    const item = provider.getTreeItem(node);
+    expect(item.description).toBe('(755)');
+  });
+
+  it('getTreeItem does not set description when permissions is undefined', () => {
+    const mgr = makeMockManager();
+    const provider = new FtpTreeProvider(mgr, fakeUri as never);
+    const node: FtpTreeNode = {
+      nodeType: 'file',
+      label: 'legacy.sh',
+      connectionId: 'conn1',
+      remotePath: '/legacy.sh',
+    };
+    const item = provider.getTreeItem(node);
+    expect(item.description).toBeUndefined();
+  });
 });
