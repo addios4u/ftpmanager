@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.2.2] - 2026-04-09
+
+### Added
+- **Permission selection on file create** — when creating a new file, a QuickPick prompt lets you choose the permissions (`644`, `664`, `755`, `600`, or custom). Skip to use the server's default.
+- **Permission selection on upload** — when uploading files (via command or drag-and-drop), a single QuickPick prompt applies the chosen permissions to all uploaded files.
+- **Permissions display in tree view** — files and folders now show their Unix permissions (e.g. `(644)`) next to the name in the explorer panel. Servers that don't report permissions show nothing.
+- **Change Permissions context menu** — right-click any file or folder to change its permissions via the same QuickPick. The badge updates immediately on success.
+
+### Fixed
+- **Localization gaps (ko/ja/zh-cn)** — permission-related strings, duplicate feature strings, and several other missing keys were added to all three locale files.
+
 ## [1.2.1] - 2026-04-09
 
 ### Fixed
