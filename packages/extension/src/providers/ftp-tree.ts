@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import type { ConnectionManager } from '../services/connection-manager.js';
+import { pickPermissions } from '../utils/pick-permissions.js';
 
 function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   return Promise.race([
@@ -347,6 +348,8 @@ export class FtpTreeProvider
     const uploadDir = target.remotePath;
     const total = localPaths.length;
 
+    const perms = await pickPermissions();
+
     await vscode.window.withProgress(
       {
         location: vscode.ProgressLocation.Notification,
@@ -360,6 +363,9 @@ export class FtpTreeProvider
           progress.report({ message: `${i + 1}/${total}: ${fileName}` });
           const remoteDest = uploadDir.endsWith('/') ? uploadDir + fileName : uploadDir + '/' + fileName;
           await client.uploadFile(localPath, remoteDest);
+          if (perms) {
+            await client.chmod(remoteDest, perms).catch(() => {});
+          }
         }
       },
     );
