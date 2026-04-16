@@ -45,6 +45,7 @@ function makeQpMock(selectLabel?: string) {
     get items(): vscode.QuickPickItem[] { return _items; },
     set items(v: vscode.QuickPickItem[]) {
       _items = v;
+      // Callbacks must be registered before items is set (mirrors production flow).
       Promise.resolve().then(() => {
         if (selectLabel !== undefined) {
           acceptCb?.();

@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import * as path from 'path';
+import { posix as posixPath } from 'path';
 import type { IFtpClient } from './ftp-client.js';
 
 /**
@@ -44,7 +44,6 @@ export async function pickRemoteFolder(
           qp.busy = false;
         },
         () => {
-          qp.dispose();
           resolve(undefined);
         },
       );
@@ -58,7 +57,7 @@ export async function pickRemoteFolder(
     if (label.startsWith('$(check)')) {
       return currentPath;
     } else if (label === '$(arrow-left) ..') {
-      currentPath = path.posix.dirname(currentPath) || '/';
+      currentPath = posixPath.dirname(currentPath) || '/';
     } else {
       const folderName = selected.description ?? label.replace(/^\$\(folder\)\s*/, '');
       currentPath = currentPath === '/' ? `/${folderName}` : `${currentPath}/${folderName}`;
