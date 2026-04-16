@@ -255,6 +255,11 @@
           "command": "ftpmanager.chmod",
           "when": "view == ftpmanager.servers && viewItem =~ /^file$|^directory$/",
           "group": "9_chmod@1"
+        },
+        {
+          "command": "ftpmanager.searchFiles",
+          "when": "view == ftpmanager.servers && viewItem == directory",
+          "group": "5_search@1"
         }
       ],
       "explorer/context": [
