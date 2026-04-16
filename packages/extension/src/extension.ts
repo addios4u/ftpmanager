@@ -474,6 +474,17 @@ export function activate(context: vscode.ExtensionContext): void {
       const config = connectionManager.getConnection(connectionId);
       if (!config) return;
 
+      let rootPath: string;
+      if (n?.nodeType === 'directory' && n?.remotePath) {
+        // Triggered from directory context menu — skip folder picker
+        rootPath = n.remotePath;
+      } else {
+        // Command palette or server node — show drill-down folder picker
+        const picked = await pickRemoteFolder(client, connectionId, config.remotePath || '/');
+        if (!picked) return;
+        rootPath = picked;
+      }
+
       const keyword = await vscode.window.showInputBox({
         title: vscode.l10n.t('Search Remote Files'),
         prompt: vscode.l10n.t('Enter keyword to search'),
@@ -494,16 +505,6 @@ export function activate(context: vscode.ExtensionContext): void {
 
       const controller = new AbortController();
       let results: SearchResult[] = [];
-      let rootPath: string;
-      if (n?.nodeType === 'directory' && n?.remotePath) {
-        // Triggered from directory context menu — skip folder picker
-        rootPath = n.remotePath;
-      } else {
-        // Command palette or server node — show drill-down folder picker
-        const picked = await pickRemoteFolder(client, connectionId, config.remotePath || '/');
-        if (!picked) return;
-        rootPath = picked;
-      }
 
       await vscode.window.withProgress(
         {
