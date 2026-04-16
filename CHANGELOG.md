@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.4] - 2026-04-16
+
+### Added
+- **Search from folder** — Search remote files starting from a specific folder instead of always from the server root.
+  - Right-click any folder in the tree view → "Search Files" to search directly within that folder.
+  - When triggering search from the command palette or server node, a drill-down folder picker lets you navigate and select the starting folder before entering a keyword.
+
 ## [1.2.3] - 2026-04-09
 
 ### Fixed
