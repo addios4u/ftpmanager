@@ -7,6 +7,7 @@ import { FtpFileSystemProvider } from './providers/ftp-fs-provider.js';
 import { COMMAND_IDS, VIEW_IDS } from '@ftpmanager/shared';
 import { searchByName, searchByContent } from './services/search-service.js';
 import type { SearchResult } from './services/search-service.js';
+import { pickRemoteFolder } from './services/folder-picker.js';
 import * as os from 'os';
 import * as fs from 'fs/promises';
 import { randomUUID } from 'crypto';
@@ -457,7 +458,7 @@ export function activate(context: vscode.ExtensionContext): void {
     }),
 
     vscode.commands.registerCommand(COMMAND_IDS.SEARCH_FILES, async (node?: unknown) => {
-      const n = node as { connectionId?: string } | undefined;
+      const n = node as FtpTreeNode | undefined;
       let connectionId = n?.connectionId;
       if (!connectionId) {
         connectionId = await pickServer(connectionManager, vscode.l10n.t('Select server to search'));
@@ -493,7 +494,16 @@ export function activate(context: vscode.ExtensionContext): void {
 
       const controller = new AbortController();
       let results: SearchResult[] = [];
-      const rootPath = config.remotePath || '/';
+      let rootPath: string;
+      if (n?.nodeType === 'directory' && n?.remotePath) {
+        // Triggered from directory context menu — skip folder picker
+        rootPath = n.remotePath;
+      } else {
+        // Command palette or server node — show drill-down folder picker
+        const picked = await pickRemoteFolder(client, connectionId, config.remotePath || '/');
+        if (!picked) return;
+        rootPath = picked;
+      }
 
       await vscode.window.withProgress(
         {
