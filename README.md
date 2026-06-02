@@ -142,4 +142,4 @@ If you find FTPManager useful, consider buying me a coffee!
 
 ## License
 
-[MIT](LICENSE)
+[MIT](https://github.com/addios4u/ftpmanager/blob/HEAD/LICENSE)

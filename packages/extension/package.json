@@ -296,5 +296,13 @@
     "esbuild": "^0.24.0",
     "typescript": "^5.7.2",
     "vitest": "^2.0.0"
-  }
+  },
+  "activationEvents": [
+    "onFileSystem:ftpmanager",
+    "onView:ftpmanager.servers",
+    "onCommand:ftpmanager.openRemoteFile",
+    "onCommand:ftpmanager.connect",
+    "onCommand:ftpmanager.addServer",
+    "onStartupFinished"
+  ]
 }
