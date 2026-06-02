@@ -452,6 +452,24 @@ export function activate(context: vscode.ExtensionContext): void {
       await vscode.commands.executeCommand('vscode.open', uri, { preview: false });
     }),
 
+    vscode.commands.registerCommand(COMMAND_IDS.SAVE_REMOTE_FILE, async () => {
+      const editor = vscode.window.activeTextEditor;
+      const document = editor?.document;
+      if (!document || document.uri.scheme !== 'ftpmanager') {
+        await vscode.commands.executeCommand('workbench.action.files.save');
+        return;
+      }
+
+      const shouldSave = await fsProvider.confirmRemoteSave(
+        document.uri,
+        Buffer.from(document.getText(), 'utf8'),
+      );
+      if (!shouldSave) return;
+
+      fsProvider.bypassNextOverwritePrompt(document.uri);
+      await document.save();
+    }),
+
     vscode.commands.registerCommand(COMMAND_IDS.UPLOAD_FILE, async (node) => {
       const n = node as { connectionId: string; remotePath: string };
       const files = await vscode.window.showOpenDialog({

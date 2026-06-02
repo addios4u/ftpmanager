@@ -147,10 +147,23 @@
         "category": "%category.ftpManager%"
       },
       {
+        "command": "ftpmanager.saveRemoteFile",
+        "title": "%command.saveRemoteFile%",
+        "category": "%category.ftpManager%"
+      },
+      {
         "command": "ftpmanager.searchFiles",
         "title": "%command.searchFiles%",
         "icon": "$(search)",
         "category": "%category.ftpManager%"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "ftpmanager.saveRemoteFile",
+        "key": "ctrl+s",
+        "mac": "cmd+s",
+        "when": "editorTextFocus && resourceScheme == ftpmanager"
       }
     ],
     "menus": {

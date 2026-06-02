@@ -20,6 +20,7 @@ export class FtpFileSystemProvider implements vscode.FileSystemProvider {
   private readonly _onDidChangeFile = new vscode.EventEmitter<vscode.FileChangeEvent[]>();
   readonly onDidChangeFile = this._onDidChangeFile.event;
   private readonly remoteBaselines = new Map<string, { mtime: number; size: number }>();
+  private readonly overwritePromptBypassUris = new Set<string>();
 
   constructor(
     private readonly connectionManager: ConnectionManager,
@@ -179,38 +180,18 @@ export class FtpFileSystemProvider implements vscode.FileSystemProvider {
       const baseline = this.remoteBaselines.get(uri.toString());
       const connection = this.connectionManager.getConnection(connectionId);
       const shouldAskBeforeOverwrite = connection?.compareBeforeOverwrite === true;
-      if (currentEntry && currentEntry.type !== 'directory' && (baseline || shouldAskBeforeOverwrite)) {
-        const currentMtime = currentEntry.modifiedAt?.getTime?.() ?? 0;
-        const currentSize = currentEntry.size ?? 0;
-        const changedByTime = Boolean(baseline && currentMtime && baseline.mtime && currentMtime > baseline.mtime + 2000);
-        const changedBySize = Boolean(baseline && currentSize !== baseline.size && currentMtime !== baseline.mtime);
-
-        if (shouldAskBeforeOverwrite || changedByTime || changedBySize) {
-          const serverName = connection?.name ?? connectionId;
-          const prompt = shouldAskBeforeOverwrite
-            ? 'Overwrite remote file "{0}" on {1}?'
-            : 'The remote file "{0}" on {1} changed since it was opened. Overwrite it?';
-          const choice = await vscode.window.showWarningMessage(
-            vscode.l10n.t(
-              prompt,
-              path.posix.basename(remotePath),
-              serverName,
-            ),
-            { modal: true },
-            vscode.l10n.t('Overwrite'),
-            vscode.l10n.t('Compare'),
-            vscode.l10n.t('Cancel'),
-          );
-
-          if (choice === vscode.l10n.t('Compare')) {
-            await this.openRemoteOverwriteDiff(client, remotePath, content);
-            return false;
-          }
-
-          if (choice !== vscode.l10n.t('Overwrite')) {
-            return false;
-          }
-        }
+      const bypassPrompt = this.overwritePromptBypassUris.delete(uri.toString());
+      if (!bypassPrompt && currentEntry && currentEntry.type !== 'directory' && (baseline || shouldAskBeforeOverwrite)) {
+        const shouldSave = await this.confirmOverwriteChoice(
+          client,
+          connectionId,
+          remotePath,
+          content,
+          currentEntry,
+          baseline,
+          shouldAskBeforeOverwrite,
+        );
+        if (!shouldSave) return false;
       }
 
       await client.putContent(Buffer.from(content), remotePath);
@@ -228,6 +209,35 @@ export class FtpFileSystemProvider implements vscode.FileSystemProvider {
 
     this._onDidChangeFile.fire([{ type: vscode.FileChangeType.Changed, uri }]);
     this.showUploadFeedback(connectionId, remotePath);
+  }
+
+  async confirmRemoteSave(uri: vscode.Uri, content: Uint8Array): Promise<boolean> {
+    const { connectionId, remotePath } = this.parseUri(uri);
+
+    return this.withAutoReconnect(connectionId, async (client) => {
+      const currentEntry = await this.getRemoteEntry(client, remotePath);
+      const baseline = this.remoteBaselines.get(uri.toString());
+      const connection = this.connectionManager.getConnection(connectionId);
+      const shouldAskBeforeOverwrite = connection?.compareBeforeOverwrite === true;
+
+      if (!currentEntry || currentEntry.type === 'directory' || (!baseline && !shouldAskBeforeOverwrite)) {
+        return true;
+      }
+
+      return this.confirmOverwriteChoice(
+        client,
+        connectionId,
+        remotePath,
+        content,
+        currentEntry,
+        baseline,
+        shouldAskBeforeOverwrite,
+      );
+    }, remotePath);
+  }
+
+  bypassNextOverwritePrompt(uri: vscode.Uri): void {
+    this.overwritePromptBypassUris.add(uri.toString());
   }
 
   async createDirectory(uri: vscode.Uri): Promise<void> {
@@ -285,6 +295,49 @@ export class FtpFileSystemProvider implements vscode.FileSystemProvider {
       mtime: entry.modifiedAt?.getTime?.() ?? 0,
       size: entry.size ?? 0,
     });
+  }
+
+  private async confirmOverwriteChoice(
+    client: IFtpClient,
+    connectionId: string,
+    remotePath: string,
+    content: Uint8Array,
+    currentEntry: RemoteFileEntry,
+    baseline: { mtime: number; size: number } | undefined,
+    shouldAskBeforeOverwrite: boolean,
+  ): Promise<boolean> {
+    const currentMtime = currentEntry.modifiedAt?.getTime?.() ?? 0;
+    const currentSize = currentEntry.size ?? 0;
+    const changedByTime = Boolean(baseline && currentMtime && baseline.mtime && currentMtime > baseline.mtime + 2000);
+    const changedBySize = Boolean(baseline && currentSize !== baseline.size && currentMtime !== baseline.mtime);
+
+    if (!shouldAskBeforeOverwrite && !changedByTime && !changedBySize) {
+      return true;
+    }
+
+    const connection = this.connectionManager.getConnection(connectionId);
+    const serverName = connection?.name ?? connectionId;
+    const prompt = shouldAskBeforeOverwrite
+      ? 'Overwrite remote file "{0}" on {1}?'
+      : 'The remote file "{0}" on {1} changed since it was opened. Overwrite it?';
+    const choice = await vscode.window.showWarningMessage(
+      vscode.l10n.t(
+        prompt,
+        path.posix.basename(remotePath),
+        serverName,
+      ),
+      { modal: true },
+      vscode.l10n.t('Overwrite'),
+      vscode.l10n.t('Compare'),
+      vscode.l10n.t('Cancel'),
+    );
+
+    if (choice === vscode.l10n.t('Compare')) {
+      await this.openRemoteOverwriteDiff(client, remotePath, content);
+      return false;
+    }
+
+    return choice === vscode.l10n.t('Overwrite');
   }
 
   private async openRemoteOverwriteDiff(

@@ -20,6 +20,7 @@ export const COMMAND_IDS = {
   COPY_REMOTE_PATH: 'ftpmanager.copyRemotePath',
   UPLOAD_TO_SERVER: 'ftpmanager.uploadToServer',
   OPEN_REMOTE_FILE: 'ftpmanager.openRemoteFile',
+  SAVE_REMOTE_FILE: 'ftpmanager.saveRemoteFile',
   SEARCH_FILES: 'ftpmanager.searchFiles',
   DUPLICATE: 'ftpmanager.duplicate',
   CHMOD: 'ftpmanager.chmod',
