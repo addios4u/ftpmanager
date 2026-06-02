@@ -255,14 +255,23 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(
     vscode.window.registerFileDecorationProvider({
       onDidChangeFileDecorations: ftpServerDecorationEmitter.event,
-      provideFileDecoration: (uri) => (
-        uri.scheme === 'ftpmanager-server' && connectionManager.isConnected(uri.authority)
-          ? {
+      provideFileDecoration: (uri) => {
+        if (uri.scheme === 'ftpmanager-server' && connectionManager.isConnected(uri.authority)) {
+          return {
             color: new vscode.ThemeColor('terminal.ansiGreen'),
             tooltip: vscode.l10n.t('Connected'),
-          }
-          : undefined
-      ),
+          };
+        }
+
+        if (uri.scheme === 'ftpmanager' && getOpenRemoteFileUris().includes(uri.toString())) {
+          return {
+            color: new vscode.ThemeColor('terminal.ansiCyan'),
+            tooltip: vscode.l10n.t('Open remote file'),
+          };
+        }
+
+        return undefined;
+      },
     }),
   );
   context.subscriptions.push(
@@ -272,6 +281,7 @@ export function activate(context: vscode.ExtensionContext): void {
   );
   context.subscriptions.push(vscode.window.tabGroups.onDidChangeTabs(() => {
     void rememberOpenRemoteFiles(context);
+    ftpServerDecorationEmitter.fire(undefined);
   }));
   void rememberOpenRemoteFiles(context);
 
