@@ -167,7 +167,7 @@ export class FtpFileSystemProvider implements vscode.FileSystemProvider {
   ): Promise<void> {
     const { connectionId, remotePath } = this.parseUri(uri);
 
-    await this.withAutoReconnect(connectionId, async (client) => {
+    const uploaded = await this.withAutoReconnect(connectionId, async (client) => {
       let originalPerms: string | undefined;
       let currentEntry: RemoteFileEntry | undefined;
 
@@ -204,11 +204,11 @@ export class FtpFileSystemProvider implements vscode.FileSystemProvider {
 
           if (choice === vscode.l10n.t('Compare')) {
             await this.openRemoteOverwriteDiff(client, remotePath, content);
-            throw new vscode.CancellationError();
+            return false;
           }
 
           if (choice !== vscode.l10n.t('Overwrite')) {
-            throw new vscode.CancellationError();
+            return false;
           }
         }
       }
@@ -221,7 +221,10 @@ export class FtpFileSystemProvider implements vscode.FileSystemProvider {
 
       const updatedEntry = await this.getRemoteEntry(client, remotePath);
       this.rememberBaseline(uri, updatedEntry);
+      return true;
     }, remotePath);
+
+    if (!uploaded) return;
 
     this._onDidChangeFile.fire([{ type: vscode.FileChangeType.Changed, uri }]);
     this.showUploadFeedback(connectionId, remotePath);
