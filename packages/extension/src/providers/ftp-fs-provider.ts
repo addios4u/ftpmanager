@@ -204,11 +204,11 @@ export class FtpFileSystemProvider implements vscode.FileSystemProvider {
 
           if (choice === vscode.l10n.t('Compare')) {
             await this.openRemoteOverwriteDiff(client, remotePath, content);
-            throw vscode.FileSystemError.NoPermissions(uri);
+            throw new vscode.CancellationError();
           }
 
           if (choice !== vscode.l10n.t('Overwrite')) {
-            throw vscode.FileSystemError.NoPermissions(uri);
+            throw new vscode.CancellationError();
           }
         }
       }
