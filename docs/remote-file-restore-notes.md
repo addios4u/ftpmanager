@@ -111,7 +111,7 @@ Example prompt:
 The remote file "index.php" on domain1.com changed since it was opened. Overwrite it?
 ```
 
-Options: `Overwrite` / `Compare`
+Options: `Overwrite` / `Cancel`
 
 ### Connected server visual indicator
 

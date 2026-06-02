@@ -156,16 +156,9 @@ export class FtpFileSystemProvider implements vscode.FileSystemProvider {
             ),
             { modal: true },
             vscode.l10n.t('Overwrite'),
-            vscode.l10n.t('Compare'),
             vscode.l10n.t('Cancel'),
           );
 
-          if (choice === vscode.l10n.t('Compare')) {
-            vscode.window.showInformationMessage(
-              vscode.l10n.t('Compare is not available for remote FTP files yet.'),
-            );
-            throw vscode.FileSystemError.NoPermissions(uri);
-          }
           if (choice !== vscode.l10n.t('Overwrite')) {
             throw vscode.FileSystemError.NoPermissions(uri);
           }
