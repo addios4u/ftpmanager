@@ -176,6 +176,20 @@ export function ConnectionDialog({ editId }: Props) {
           </div>
         )}
 
+        <div className="form-group checkbox-group">
+          <label>
+            <input
+              type="checkbox"
+              checked={config.compareBeforeOverwrite === true}
+              onChange={(e) => setConfig((c) => ({ ...c, compareBeforeOverwrite: e.target.checked || undefined }))}
+            />
+            Ask to compare before overwrite
+          </label>
+          <small style={{ opacity: 0.7 }}>
+            When enabled, saving an existing remote file asks whether to overwrite, compare, or cancel.
+          </small>
+        </div>
+
         {config.protocol === 'sftp' && (
           <div className="sftp-section">
             <h3>SSH Key Authentication (optional)</h3>

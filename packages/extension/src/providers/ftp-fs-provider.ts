@@ -177,18 +177,22 @@ export class FtpFileSystemProvider implements vscode.FileSystemProvider {
       }
 
       const baseline = this.remoteBaselines.get(uri.toString());
-      if (baseline && currentEntry && currentEntry.type !== 'directory') {
+      const connection = this.connectionManager.getConnection(connectionId);
+      const shouldAskBeforeOverwrite = connection?.compareBeforeOverwrite === true;
+      if (currentEntry && currentEntry.type !== 'directory' && (baseline || shouldAskBeforeOverwrite)) {
         const currentMtime = currentEntry.modifiedAt?.getTime?.() ?? 0;
         const currentSize = currentEntry.size ?? 0;
-        const changedByTime = currentMtime && baseline.mtime && currentMtime > baseline.mtime + 2000;
-        const changedBySize = currentSize !== baseline.size && currentMtime !== baseline.mtime;
+        const changedByTime = Boolean(baseline && currentMtime && baseline.mtime && currentMtime > baseline.mtime + 2000);
+        const changedBySize = Boolean(baseline && currentSize !== baseline.size && currentMtime !== baseline.mtime);
 
-        if (changedByTime || changedBySize) {
-          const connection = this.connectionManager.getConnection(connectionId);
+        if (shouldAskBeforeOverwrite || changedByTime || changedBySize) {
           const serverName = connection?.name ?? connectionId;
+          const prompt = shouldAskBeforeOverwrite
+            ? 'Overwrite remote file "{0}" on {1}?'
+            : 'The remote file "{0}" on {1} changed since it was opened. Overwrite it?';
           const choice = await vscode.window.showWarningMessage(
             vscode.l10n.t(
-              'The remote file "{0}" on {1} changed since it was opened. Overwrite it?',
+              prompt,
               path.posix.basename(remotePath),
               serverName,
             ),
