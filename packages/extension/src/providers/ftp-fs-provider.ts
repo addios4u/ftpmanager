@@ -31,9 +31,45 @@ export class FtpFileSystemProvider implements vscode.FileSystemProvider {
   private async withAutoReconnect<T>(
     connectionId: string,
     fn: (client: IFtpClient) => Promise<T>,
+    _remotePath?: string,
   ): Promise<T> {
-    const client = this.connectionManager.getClient(connectionId);
-    if (!client) throw vscode.FileSystemError.Unavailable(connectionId);
+    let client = this.connectionManager.getClient(connectionId);
+    if (!client) {
+      const connection = this.connectionManager.getConnection(connectionId);
+      const connectionName = connection?.name ?? connectionId;
+      try {
+        await this.connectionManager.connect(connectionId);
+        client = this.connectionManager.getClient(connectionId);
+      } catch (err) {
+        void vscode.window.showWarningMessage(
+          vscode.l10n.t(
+            'Connection lost for "{0}": {1}',
+            connectionName,
+            err instanceof Error ? err.message : String(err),
+          ),
+          vscode.l10n.t('Retry'),
+          vscode.l10n.t('Edit connection'),
+        ).then(async (choice) => {
+          if (choice === vscode.l10n.t('Retry')) {
+            try {
+              await this.connectionManager.reconnect(connectionId);
+            } catch (retryErr) {
+              vscode.window.showErrorMessage(
+                vscode.l10n.t(
+                  'Failed to reconnect "{0}": {1}',
+                  connectionName,
+                  retryErr instanceof Error ? retryErr.message : String(retryErr),
+                ),
+              );
+            }
+          } else if (choice === vscode.l10n.t('Edit connection')) {
+            void vscode.commands.executeCommand('ftpmanager.editServer', { connectionId });
+          }
+        });
+        throw err;
+      }
+      if (!client) throw vscode.FileSystemError.Unavailable(connectionId);
+    }
 
     try {
       return await fn(client);
@@ -96,7 +132,7 @@ export class FtpFileSystemProvider implements vscode.FileSystemProvider {
         mtime: entry.modifiedAt.getTime(),
         size: entry.size,
       };
-    });
+    }, remotePath);
   }
 
   async readDirectory(uri: vscode.Uri): Promise<[string, vscode.FileType][]> {
@@ -109,7 +145,7 @@ export class FtpFileSystemProvider implements vscode.FileSystemProvider {
           e.name,
           e.type === 'directory' ? vscode.FileType.Directory : vscode.FileType.File,
         ]);
-    });
+    }, remotePath);
   }
 
   async readFile(uri: vscode.Uri): Promise<Uint8Array> {
@@ -119,7 +155,7 @@ export class FtpFileSystemProvider implements vscode.FileSystemProvider {
       const entry = await this.getRemoteEntry(client, remotePath);
       this.rememberBaseline(uri, entry);
       return new Uint8Array(content);
-    });
+    }, remotePath);
   }
 
   async writeFile(
@@ -173,7 +209,7 @@ export class FtpFileSystemProvider implements vscode.FileSystemProvider {
 
       const updatedEntry = await this.getRemoteEntry(client, remotePath);
       this.rememberBaseline(uri, updatedEntry);
-    });
+    }, remotePath);
 
     this._onDidChangeFile.fire([{ type: vscode.FileChangeType.Changed, uri }]);
     this.showUploadFeedback(connectionId, remotePath);
@@ -181,7 +217,7 @@ export class FtpFileSystemProvider implements vscode.FileSystemProvider {
 
   async createDirectory(uri: vscode.Uri): Promise<void> {
     const { connectionId, remotePath } = this.parseUri(uri);
-    await this.withAutoReconnect(connectionId, (client) => client.mkdir(remotePath));
+    await this.withAutoReconnect(connectionId, (client) => client.mkdir(remotePath), remotePath);
   }
 
   async delete(uri: vscode.Uri, options: { recursive: boolean }): Promise<void> {
@@ -193,7 +229,7 @@ export class FtpFileSystemProvider implements vscode.FileSystemProvider {
       } else {
         await client.delete(remotePath);
       }
-    });
+    }, remotePath);
     this._onDidChangeFile.fire([{ type: vscode.FileChangeType.Deleted, uri }]);
   }
 
@@ -204,7 +240,7 @@ export class FtpFileSystemProvider implements vscode.FileSystemProvider {
   ): Promise<void> {
     const { connectionId, remotePath: oldPath } = this.parseUri(oldUri);
     const { remotePath: newPath } = this.parseUri(newUri);
-    await this.withAutoReconnect(connectionId, (client) => client.rename(oldPath, newPath));
+    await this.withAutoReconnect(connectionId, (client) => client.rename(oldPath, newPath), oldPath);
     this._onDidChangeFile.fire([
       { type: vscode.FileChangeType.Deleted, uri: oldUri },
       { type: vscode.FileChangeType.Created, uri: newUri },
@@ -249,7 +285,7 @@ export class FtpFileSystemProvider implements vscode.FileSystemProvider {
     }
 
     vscode.window.showInformationMessage(
-      vscode.l10n.t('{0} uploaded to {1}', fileName, serverName),
+      `✓ ${fileName} uploaded to ${serverName}`,
     );
   }
 
