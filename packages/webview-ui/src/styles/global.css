@@ -55,6 +55,17 @@ button.danger {
 .welcome-header { margin-bottom: 24px; }
 .welcome-header p { opacity: 0.7; margin-top: 4px; }
 
+.configuration-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.configuration-actions span {
+  opacity: 0.65;
+  font-size: 0.85em;
+}
+
 .server-list { margin-bottom: 16px; }
 .server-item {
   display: flex;

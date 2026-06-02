@@ -5,6 +5,12 @@ import type { IFtpClient } from './ftp-client.js';
 import { FtpClient } from './ftp-client.js';
 import { SftpClient } from './sftp-client.js';
 
+export interface ExportedConnection {
+  config: FtpConnectionConfig;
+  password?: string;
+  passphrase?: string;
+}
+
 export class ConnectionManager {
   private readonly context: vscode.ExtensionContext;
   private readonly clients = new Map<string, IFtpClient>();
@@ -36,6 +42,58 @@ export class ConnectionManager {
 
   getConnection(id: string): FtpConnectionConfig | undefined {
     return this.getConnections().find((c) => c.id === id);
+  }
+
+  async getExportedConnections(): Promise<ExportedConnection[]> {
+    const exported: ExportedConnection[] = [];
+    for (const config of this.getConnections()) {
+      exported.push({
+        config,
+        password: await this.context.secrets.get(PASSWORD_KEY_PREFIX + config.id),
+        passphrase: await this.context.secrets.get(PASSPHRASE_KEY_PREFIX + config.id),
+      });
+    }
+    return exported;
+  }
+
+  async importConnections(importedConnections: ExportedConnection[]): Promise<void> {
+    const connections = this.getConnections();
+    const nextConnections = [...connections];
+
+    for (const imported of importedConnections) {
+      const existingIndex = nextConnections.findIndex((connection) => (
+        connection.id === imported.config.id || connection.name === imported.config.name
+      ));
+
+      if (existingIndex >= 0) {
+        const existing = nextConnections[existingIndex];
+        if (this.connectedIds.has(existing.id)) {
+          await this.disconnect(existing.id);
+        }
+        if (existing.id !== imported.config.id) {
+          await this.context.secrets.delete(PASSWORD_KEY_PREFIX + existing.id);
+          await this.context.secrets.delete(PASSPHRASE_KEY_PREFIX + existing.id);
+        }
+        nextConnections[existingIndex] = imported.config;
+      } else {
+        nextConnections.push(imported.config);
+      }
+
+      if (imported.password !== undefined) {
+        await this.context.secrets.store(PASSWORD_KEY_PREFIX + imported.config.id, imported.password);
+      } else {
+        await this.context.secrets.delete(PASSWORD_KEY_PREFIX + imported.config.id);
+      }
+
+      if (imported.passphrase !== undefined) {
+        await this.context.secrets.store(PASSPHRASE_KEY_PREFIX + imported.config.id, imported.passphrase);
+      } else {
+        await this.context.secrets.delete(PASSPHRASE_KEY_PREFIX + imported.config.id);
+      }
+    }
+
+    await this.context.globalState.update(CONNECTIONS_KEY, nextConnections);
+    this._onDidChangeConnections.fire();
   }
 
   isConnected(id: string): boolean {

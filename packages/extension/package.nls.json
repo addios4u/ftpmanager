@@ -1,7 +1,7 @@
 {
   "viewName.servers": "FTP Manager",
   "category.ftpManager": "FTP Manager",
-  "command.addServer": "Add Server",
+  "command.addServer": "Configurations",
   "command.editServer": "Edit Server",
   "command.deleteServer": "Delete Server",
   "command.connect": "Connect",
