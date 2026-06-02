@@ -204,10 +204,12 @@ export class FtpFileSystemProvider implements vscode.FileSystemProvider {
 
           if (choice === vscode.l10n.t('Compare')) {
             await this.openRemoteOverwriteDiff(client, remotePath, content);
+            this.keepDocumentDirtyAfterSkippedSave(uri);
             return false;
           }
 
           if (choice !== vscode.l10n.t('Overwrite')) {
+            this.keepDocumentDirtyAfterSkippedSave(uri);
             return false;
           }
         }
@@ -285,6 +287,21 @@ export class FtpFileSystemProvider implements vscode.FileSystemProvider {
       mtime: entry.modifiedAt?.getTime?.() ?? 0,
       size: entry.size ?? 0,
     });
+  }
+
+  private keepDocumentDirtyAfterSkippedSave(uri: vscode.Uri): void {
+    setTimeout(() => {
+      const document = vscode.workspace.textDocuments.find((doc) => doc.uri.toString() === uri.toString());
+      if (!document || document.isDirty) return;
+
+      const edit = new vscode.WorkspaceEdit();
+      const fullRange = new vscode.Range(
+        document.positionAt(0),
+        document.positionAt(document.getText().length),
+      );
+      edit.replace(uri, fullRange, document.getText());
+      void vscode.workspace.applyEdit(edit);
+    }, 50);
   }
 
   private async openRemoteOverwriteDiff(
