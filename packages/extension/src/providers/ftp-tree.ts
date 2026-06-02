@@ -144,7 +144,7 @@ export class FtpTreeProvider
     }
 
     if (node.nodeType === 'file' || node.nodeType === 'directory') {
-      item.resourceUri = vscode.Uri.parse(`ftpmanager://${node.connectionId}${node.remotePath}`);
+      item.resourceUri = vscode.Uri.parse(`ftpmanager-tree://${node.connectionId}${node.remotePath}`);
     }
 
     if ((node.nodeType === 'file' || node.nodeType === 'directory') && node.permissions) {

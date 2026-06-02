@@ -74,6 +74,18 @@ function getOpenRemoteFileUris(): string[] {
   return [...new Set(uris)];
 }
 
+function getRemoteUriFromTreeUri(uri: vscode.Uri): vscode.Uri {
+  return vscode.Uri.parse(`ftpmanager://${uri.authority}${uri.path}`);
+}
+
+function isDirtyRemoteDocument(uri: vscode.Uri): boolean {
+  return vscode.workspace.textDocuments.some((document) => (
+    document.uri.scheme === 'ftpmanager' &&
+    document.uri.toString() === uri.toString() &&
+    document.isDirty
+  ));
+}
+
 async function rememberOpenRemoteFiles(context: vscode.ExtensionContext): Promise<void> {
   await context.workspaceState.update(OPEN_REMOTE_FILES_KEY, getOpenRemoteFileUris());
 }
@@ -263,10 +275,17 @@ export function activate(context: vscode.ExtensionContext): void {
           };
         }
 
-        if (uri.scheme === 'ftpmanager' && getOpenRemoteFileUris().includes(uri.toString())) {
+        if (uri.scheme === 'ftpmanager-tree' && getOpenRemoteFileUris().includes(getRemoteUriFromTreeUri(uri).toString())) {
           return {
             color: new vscode.ThemeColor('terminal.ansiCyan'),
             tooltip: vscode.l10n.t('Open remote file'),
+          };
+        }
+
+        if (uri.scheme === 'ftpmanager' && isDirtyRemoteDocument(uri)) {
+          return {
+            color: new vscode.ThemeColor('terminal.ansiRed'),
+            tooltip: vscode.l10n.t('Unsaved remote changes'),
           };
         }
 
@@ -282,6 +301,22 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(vscode.window.tabGroups.onDidChangeTabs(() => {
     void rememberOpenRemoteFiles(context);
     ftpServerDecorationEmitter.fire(undefined);
+  }));
+  context.subscriptions.push(vscode.workspace.onDidChangeTextDocument((event) => {
+    if (event.document.uri.scheme === 'ftpmanager') {
+      ftpServerDecorationEmitter.fire(event.document.uri);
+    }
+  }));
+  context.subscriptions.push(vscode.workspace.onDidSaveTextDocument((document) => {
+    if (document.uri.scheme === 'ftpmanager') {
+      ftpServerDecorationEmitter.fire(document.uri);
+    }
+  }));
+  context.subscriptions.push(vscode.workspace.onDidCloseTextDocument((document) => {
+    if (document.uri.scheme === 'ftpmanager') {
+      ftpServerDecorationEmitter.fire(document.uri);
+      ftpServerDecorationEmitter.fire(vscode.Uri.parse(`ftpmanager-tree://${document.uri.authority}${document.uri.path}`));
+    }
   }));
   void rememberOpenRemoteFiles(context);
 
