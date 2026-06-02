@@ -245,6 +245,62 @@ function restoreRemoteFiles(
   }
 }
 
+async function reconnectOpenRemoteFiles(
+  context: vscode.ExtensionContext,
+  treeView: vscode.TreeView<FtpTreeNode>,
+): Promise<void> {
+  const openUris = getOpenRemoteFileUris();
+  const connectionIds = openUris
+    .map((uriString) => {
+      try {
+        return vscode.Uri.parse(uriString).authority;
+      } catch {
+        return '';
+      }
+    })
+    .filter((connectionId, index, all) => connectionId && all.indexOf(connectionId) === index);
+
+  if (connectionIds.length === 0) {
+    vscode.window.showInformationMessage(vscode.l10n.t('No open FTPManager files to reconnect.'));
+    return;
+  }
+
+  await vscode.window.withProgress(
+    {
+      location: vscode.ProgressLocation.Notification,
+      title: vscode.l10n.t('Reconnecting open FTPManager files...'),
+      cancellable: false,
+    },
+    async (progress) => {
+      for (const connectionId of connectionIds) {
+        const connection = connectionManager.getConnection(connectionId);
+        const connectionName = connection?.name ?? connectionId;
+        progress.report({ message: connectionName });
+
+        if (connectionManager.isConnected(connectionId)) {
+          await connectionManager.reconnect(connectionId);
+        } else {
+          await connectionManager.connect(connectionId);
+        }
+
+        const urisForConnection = openUris.filter((uriString) => {
+          try {
+            return vscode.Uri.parse(uriString).authority === connectionId;
+          } catch {
+            return false;
+          }
+        });
+        await revealRestoredFiles(treeView, connectionId, urisForConnection);
+        await reopenRestoredFiles(context, connectionId);
+      }
+    },
+  );
+
+  vscode.window.showInformationMessage(
+    vscode.l10n.t('Reconnected {0} FTPManager server(s).', connectionIds.length),
+  );
+}
+
 export function activate(context: vscode.ExtensionContext): void {
   connectionManager = new ConnectionManager(context);
   treeProvider = new FtpTreeProvider(connectionManager, context.extensionUri);
@@ -381,6 +437,11 @@ export function activate(context: vscode.ExtensionContext): void {
 
     vscode.commands.registerCommand(COMMAND_IDS.REFRESH, (node?: unknown) => {
       treeProvider.refresh(node as Parameters<typeof treeProvider.refresh>[0]);
+    }),
+
+    vscode.commands.registerCommand(COMMAND_IDS.RECONNECT_OPEN_FILES, async () => {
+      await reconnectOpenRemoteFiles(context, treeView);
+      treeProvider.refresh();
     }),
 
     vscode.commands.registerCommand(COMMAND_IDS.OPEN_REMOTE_FILE, async (node) => {

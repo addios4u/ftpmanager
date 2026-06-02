@@ -143,6 +143,16 @@ export function ConnectionDialog({ editId }: Props) {
           />
         </div>
 
+        <div className="form-group">
+          <label>Group</label>
+          <input
+            type="text"
+            value={config.group ?? ''}
+            onChange={(e) => setConfig((c) => ({ ...c, group: e.target.value.trim() || undefined }))}
+            placeholder="Clients, Perso, Production, Staging..."
+          />
+        </div>
+
         {(config.protocol === 'ftp' || config.protocol === 'ftps') && (
           <div className="form-group">
             <label>Data Transfer Mode</label>

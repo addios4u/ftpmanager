@@ -1,5 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
+import * as os from 'os';
+import { randomUUID } from 'crypto';
 import type { IFtpClient } from '../services/ftp-client.js';
 import type { ConnectionManager } from '../services/connection-manager.js';
 import type { RemoteFileEntry } from '@ftpmanager/shared';
@@ -192,8 +194,14 @@ export class FtpFileSystemProvider implements vscode.FileSystemProvider {
             ),
             { modal: true },
             vscode.l10n.t('Overwrite'),
+            vscode.l10n.t('Compare'),
             vscode.l10n.t('Cancel'),
           );
+
+          if (choice === vscode.l10n.t('Compare')) {
+            await this.openRemoteOverwriteDiff(client, remotePath, content);
+            throw vscode.FileSystemError.NoPermissions(uri);
+          }
 
           if (choice !== vscode.l10n.t('Overwrite')) {
             throw vscode.FileSystemError.NoPermissions(uri);
@@ -270,6 +278,29 @@ export class FtpFileSystemProvider implements vscode.FileSystemProvider {
       mtime: entry.modifiedAt?.getTime?.() ?? 0,
       size: entry.size ?? 0,
     });
+  }
+
+  private async openRemoteOverwriteDiff(
+    client: IFtpClient,
+    remotePath: string,
+    localContent: Uint8Array,
+  ): Promise<void> {
+    const fileName = path.posix.basename(remotePath) || 'remote-file';
+    const tempRoot = vscode.Uri.file(path.join(os.tmpdir(), `ftpmanager-compare-${randomUUID()}`));
+    await vscode.workspace.fs.createDirectory(tempRoot);
+
+    const remoteTemp = vscode.Uri.joinPath(tempRoot, `remote-${fileName}`);
+    const localTemp = vscode.Uri.joinPath(tempRoot, `local-${fileName}`);
+    const remoteContent = await client.getContent(remotePath);
+
+    await vscode.workspace.fs.writeFile(remoteTemp, new Uint8Array(remoteContent));
+    await vscode.workspace.fs.writeFile(localTemp, localContent);
+    await vscode.commands.executeCommand(
+      'vscode.diff',
+      remoteTemp,
+      localTemp,
+      vscode.l10n.t('Remote vs Local: {0}', fileName),
+    );
   }
 
   private showUploadFeedback(connectionId: string, remotePath: string): void {

@@ -9,6 +9,7 @@ export const COMMAND_IDS = {
   CONNECT: 'ftpmanager.connect',
   DISCONNECT: 'ftpmanager.disconnect',
   REFRESH: 'ftpmanager.refresh',
+  RECONNECT_OPEN_FILES: 'ftpmanager.reconnectOpenFiles',
   UPLOAD_FILE: 'ftpmanager.uploadFile',
   DOWNLOAD_FILE: 'ftpmanager.downloadFile',
   DOWNLOAD_FOLDER: 'ftpmanager.downloadFolder',

@@ -12,7 +12,7 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   ]);
 }
 
-export type FtpNodeType = 'server' | 'directory' | 'file';
+export type FtpNodeType = 'group' | 'server' | 'directory' | 'file';
 
 export interface FtpTreeNode {
   nodeType: FtpNodeType;
@@ -20,6 +20,7 @@ export interface FtpTreeNode {
   connectionId: string;
   remotePath: string;
   permissions?: string;
+  group?: string;
 }
 
 function getContextValue(node: FtpTreeNode, connectionManager: ConnectionManager): string {
@@ -33,6 +34,7 @@ function getContextValue(node: FtpTreeNode, connectionManager: ConnectionManager
 
 function getCollapsibleState(nodeType: FtpNodeType): vscode.TreeItemCollapsibleState {
   switch (nodeType) {
+    case 'group':
     case 'server':
     case 'directory':
       return vscode.TreeItemCollapsibleState.Collapsed;
@@ -46,6 +48,9 @@ function getIcon(
   connectionManager: ConnectionManager,
   extensionUri: vscode.Uri,
 ): vscode.ThemeIcon | { light: vscode.Uri; dark: vscode.Uri } {
+  if (node.nodeType === 'group') {
+    return new vscode.ThemeIcon('folder-library');
+  }
   if (node.nodeType === 'server') {
     const protocol = connectionManager.getConnection(node.connectionId)?.protocol ?? 'ftp';
     const baseName = protocol === 'sftp' ? 'sftp' : 'ftp';
@@ -143,6 +148,11 @@ export class FtpTreeProvider
       item.description = connected ? vscode.l10n.t('Connected') : '';
     }
 
+    if (node.nodeType === 'group') {
+      item.id = `group:${node.group ?? node.label}`;
+      item.contextValue = 'group';
+    }
+
     if (node.nodeType === 'file' || node.nodeType === 'directory') {
       item.resourceUri = vscode.Uri.parse(`ftpmanager-tree://${node.connectionId}${node.remotePath}`);
     }
@@ -163,7 +173,21 @@ export class FtpTreeProvider
   }
 
   getParent(node: FtpTreeNode): FtpTreeNode | undefined {
-    if (node.nodeType === 'server') return undefined;
+    if (node.nodeType === 'group') return undefined;
+
+    if (node.nodeType === 'server') {
+      const config = this.connectionManager.getConnection(node.connectionId);
+      const group = config?.group?.trim();
+      return group
+        ? {
+          nodeType: 'group',
+          label: group,
+          group,
+          connectionId: '',
+          remotePath: '',
+        }
+        : undefined;
+    }
 
     const config = this.connectionManager.getConnection(node.connectionId);
     const rootPath = this.normalizePath(config?.remotePath || '/');
@@ -205,6 +229,8 @@ export class FtpTreeProvider
       return this.getRootNodes();
     }
     switch (node.nodeType) {
+      case 'group':
+        return this.getGroupChildren(node);
       case 'server':
         return this.getServerChildren(node);
       case 'directory':
@@ -215,12 +241,31 @@ export class FtpTreeProvider
   }
 
   private getRootNodes(): FtpTreeNode[] {
-    return this.connectionManager.getConnections().map((cfg): FtpTreeNode => ({
-      nodeType: 'server',
-      label: cfg.name,
-      connectionId: cfg.id,
-      remotePath: cfg.remotePath,
+    const connections = this.connectionManager.getConnections();
+    const groups = [...new Set(
+      connections
+        .map((cfg) => cfg.group?.trim())
+        .filter((group): group is string => Boolean(group)),
+    )].sort((a, b) => a.localeCompare(b));
+
+    const groupNodes = groups.map((group): FtpTreeNode => ({
+      nodeType: 'group',
+      label: group,
+      group,
+      connectionId: '',
+      remotePath: '',
     }));
+
+    const ungrouped = connections
+      .filter((cfg) => !cfg.group?.trim())
+      .map((cfg): FtpTreeNode => ({
+        nodeType: 'server',
+        label: cfg.name,
+        connectionId: cfg.id,
+        remotePath: cfg.remotePath,
+      }));
+
+    return [...groupNodes, ...ungrouped];
   }
 
   private getNodeId(node: FtpTreeNode): string {
@@ -229,6 +274,19 @@ export class FtpTreeProvider
 
   private normalizePath(remotePath: string): string {
     return (remotePath || '/').replace(/\\/g, '/').replace(/\/+/g, '/').replace(/\/$/, '') || '/';
+  }
+
+  private getGroupChildren(node: FtpTreeNode): FtpTreeNode[] {
+    const group = node.group ?? node.label;
+    return this.connectionManager.getConnections()
+      .filter((cfg) => cfg.group?.trim() === group)
+      .map((cfg): FtpTreeNode => ({
+        nodeType: 'server',
+        label: cfg.name,
+        connectionId: cfg.id,
+        remotePath: cfg.remotePath,
+        group,
+      }));
   }
 
   private async getServerChildren(node: FtpTreeNode): Promise<FtpTreeNode[]> {

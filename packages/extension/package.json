@@ -75,6 +75,12 @@
         "category": "%category.ftpManager%"
       },
       {
+        "command": "ftpmanager.reconnectOpenFiles",
+        "title": "%command.reconnectOpenFiles%",
+        "icon": "$(debug-restart)",
+        "category": "%category.ftpManager%"
+      },
+      {
         "command": "ftpmanager.uploadFile",
         "title": "%command.uploadFile%",
         "icon": "$(cloud-upload)",
@@ -156,6 +162,11 @@
         },
         {
           "command": "ftpmanager.refresh",
+          "when": "view == ftpmanager.servers",
+          "group": "navigation"
+        },
+        {
+          "command": "ftpmanager.reconnectOpenFiles",
           "when": "view == ftpmanager.servers",
           "group": "navigation"
         },
