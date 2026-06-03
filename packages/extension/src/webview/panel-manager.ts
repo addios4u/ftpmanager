@@ -5,6 +5,14 @@ import type { WebviewMessage } from '@ftpmanager/shared';
 import type { ConnectionManager } from '../services/connection-manager.js';
 import { FtpClient } from '../services/ftp-client.js';
 import { SftpClient } from '../services/sftp-client.js';
+import type { ExportedConnection } from '../services/connection-manager.js';
+
+interface ConnectionsExportFile {
+  format: 'ftpmanager.connections';
+  version: 1;
+  exportedAt: string;
+  connections: ExportedConnection[];
+}
 
 export class WebviewPanelManager {
   private panel: vscode.WebviewPanel | undefined;
@@ -46,7 +54,13 @@ export class WebviewPanelManager {
 
     this.panel.webview.onDidReceiveMessage(
       async (msg: WebviewMessage) => {
-        await this.handleMessage(msg);
+        try {
+          await this.handleMessage(msg);
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          vscode.window.showErrorMessage(`FTPManager: ${message}`);
+          this.panel?.webview.postMessage({ type: 'error', message });
+        }
       },
       undefined,
       this.context.subscriptions,
@@ -87,6 +101,16 @@ export class WebviewPanelManager {
           type: 'stateSync',
           connections: this.connectionManager.getConnectionInfos(),
         });
+        break;
+      }
+
+      case 'exportConnections': {
+        await this.exportConnections();
+        break;
+      }
+
+      case 'importConnections': {
+        await this.importConnections();
         break;
       }
 
@@ -137,6 +161,58 @@ export class WebviewPanelManager {
         break;
       }
     }
+  }
+
+  private async exportConnections(): Promise<void> {
+    const destination = await vscode.window.showSaveDialog({
+      defaultUri: vscode.Uri.file('ftpmanager-servers.json'),
+      saveLabel: 'Export Servers',
+      filters: { JSON: ['json'] },
+    });
+    if (!destination) return;
+
+    const exportFile: ConnectionsExportFile = {
+      format: 'ftpmanager.connections',
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      connections: await this.connectionManager.getExportedConnections(),
+    };
+
+    await vscode.workspace.fs.writeFile(
+      destination,
+      new TextEncoder().encode(JSON.stringify(exportFile, null, 2)),
+    );
+    vscode.window.showInformationMessage(
+      `Exported ${exportFile.connections.length} FTPManager server(s). Keep this file private; it contains passwords.`,
+    );
+  }
+
+  private async importConnections(): Promise<void> {
+    const files = await vscode.window.showOpenDialog({
+      canSelectFiles: true,
+      canSelectFolders: false,
+      canSelectMany: false,
+      openLabel: 'Import Servers',
+      filters: { JSON: ['json'] },
+    });
+    if (!files || files.length === 0) return;
+
+    const raw = new TextDecoder().decode(await vscode.workspace.fs.readFile(files[0]));
+    const parsed = JSON.parse(raw) as Partial<ConnectionsExportFile>;
+    if (
+      parsed.format !== 'ftpmanager.connections' ||
+      parsed.version !== 1 ||
+      !Array.isArray(parsed.connections)
+    ) {
+      throw new Error('Invalid FTPManager export file.');
+    }
+
+    await this.connectionManager.importConnections(parsed.connections);
+    this.panel?.webview.postMessage({
+      type: 'stateSync',
+      connections: this.connectionManager.getConnectionInfos(),
+    });
+    vscode.window.showInformationMessage(`Imported ${parsed.connections.length} FTPManager server(s).`);
   }
 
   private getWebviewHtml(webview: vscode.Webview): string {

@@ -6,6 +6,8 @@ export type WebviewMessage =
   | { type: 'saveConnection'; config: FtpConnectionConfig; password?: string; passphrase?: string }
   | { type: 'testConnection'; config: FtpConnectionConfig; password?: string; passphrase?: string }
   | { type: 'deleteConnection'; connectionId: string }
+  | { type: 'exportConnections' }
+  | { type: 'importConnections' }
   | { type: 'browsePrivateKey' }
   | { type: 'openExternal'; url: string };
 

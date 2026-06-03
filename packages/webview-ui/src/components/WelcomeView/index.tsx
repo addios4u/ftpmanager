@@ -12,6 +12,16 @@ export function WelcomeView() {
         <p>Connect to remote servers via FTP, FTPS, or SFTP</p>
       </div>
 
+      <div className="configuration-actions">
+        <button onClick={() => postMessage({ type: 'importConnections' })}>
+          Import
+        </button>
+        <button onClick={() => postMessage({ type: 'exportConnections' })}>
+          Export
+        </button>
+        <span>Exports include saved passwords.</span>
+      </div>
+
       {connections.length > 0 && (
         <div className="server-list">
           <h2>Saved Servers</h2>

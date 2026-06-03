@@ -143,6 +143,16 @@ export function ConnectionDialog({ editId }: Props) {
           />
         </div>
 
+        <div className="form-group">
+          <label>Group</label>
+          <input
+            type="text"
+            value={config.group ?? ''}
+            onChange={(e) => setConfig((c) => ({ ...c, group: e.target.value.trim() || undefined }))}
+            placeholder="Clients, Perso, Production, Staging..."
+          />
+        </div>
+
         {(config.protocol === 'ftp' || config.protocol === 'ftps') && (
           <div className="form-group">
             <label>Data Transfer Mode</label>
@@ -165,6 +175,20 @@ export function ConnectionDialog({ editId }: Props) {
             </small>
           </div>
         )}
+
+        <div className="form-group checkbox-group">
+          <label>
+            <input
+              type="checkbox"
+              checked={config.compareBeforeOverwrite === true}
+              onChange={(e) => setConfig((c) => ({ ...c, compareBeforeOverwrite: e.target.checked || undefined }))}
+            />
+            Ask to compare before overwrite
+          </label>
+          <small style={{ opacity: 0.7 }}>
+            When enabled, saving an existing remote file asks whether to overwrite, compare, or cancel.
+          </small>
+        </div>
 
         {config.protocol === 'sftp' && (
           <div className="sftp-section">

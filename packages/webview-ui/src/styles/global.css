@@ -55,6 +55,17 @@ button.danger {
 .welcome-header { margin-bottom: 24px; }
 .welcome-header p { opacity: 0.7; margin-top: 4px; }
 
+.configuration-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.configuration-actions span {
+  opacity: 0.65;
+  font-size: 0.85em;
+}
+
 .server-list { margin-bottom: 16px; }
 .server-item {
   display: flex;
@@ -118,6 +129,15 @@ button.coffee-btn:hover { opacity: 0.85; }
 .form { display: flex; flex-direction: column; gap: 12px; }
 .form-group { display: flex; flex-direction: column; gap: 4px; }
 .form-group label { font-size: 0.9em; opacity: 0.8; }
+.checkbox-group label {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+.checkbox-group input {
+  width: auto;
+}
 
 .form-row { display: flex; gap: 12px; }
 .flex-1 { flex: 1; }

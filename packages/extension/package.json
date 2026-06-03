@@ -43,7 +43,7 @@
       {
         "command": "ftpmanager.addServer",
         "title": "%command.addServer%",
-        "icon": "$(add)",
+        "icon": "$(gear)",
         "category": "%category.ftpManager%"
       },
       {
@@ -72,6 +72,12 @@
         "command": "ftpmanager.refresh",
         "title": "%command.refresh%",
         "icon": "$(refresh)",
+        "category": "%category.ftpManager%"
+      },
+      {
+        "command": "ftpmanager.reconnectOpenFiles",
+        "title": "%command.reconnectOpenFiles%",
+        "icon": "$(plug)",
         "category": "%category.ftpManager%"
       },
       {
@@ -141,10 +147,23 @@
         "category": "%category.ftpManager%"
       },
       {
+        "command": "ftpmanager.saveRemoteFile",
+        "title": "%command.saveRemoteFile%",
+        "category": "%category.ftpManager%"
+      },
+      {
         "command": "ftpmanager.searchFiles",
         "title": "%command.searchFiles%",
         "icon": "$(search)",
         "category": "%category.ftpManager%"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "ftpmanager.saveRemoteFile",
+        "key": "ctrl+s",
+        "mac": "cmd+s",
+        "when": "editorTextFocus && resourceScheme == ftpmanager"
       }
     ],
     "menus": {
@@ -156,6 +175,11 @@
         },
         {
           "command": "ftpmanager.refresh",
+          "when": "view == ftpmanager.servers",
+          "group": "navigation"
+        },
+        {
+          "command": "ftpmanager.reconnectOpenFiles",
           "when": "view == ftpmanager.servers",
           "group": "navigation"
         },
@@ -296,5 +320,13 @@
     "esbuild": "^0.24.0",
     "typescript": "^5.7.2",
     "vitest": "^2.0.0"
-  }
+  },
+  "activationEvents": [
+    "onFileSystem:ftpmanager",
+    "onView:ftpmanager.servers",
+    "onCommand:ftpmanager.openRemoteFile",
+    "onCommand:ftpmanager.connect",
+    "onCommand:ftpmanager.addServer",
+    "onStartupFinished"
+  ]
 }

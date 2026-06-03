@@ -1,7 +1,10 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
+import * as os from 'os';
+import { randomUUID } from 'crypto';
 import type { IFtpClient } from '../services/ftp-client.js';
 import type { ConnectionManager } from '../services/connection-manager.js';
+import type { RemoteFileEntry } from '@ftpmanager/shared';
 
 function isStaleConnectionError(err: unknown): boolean {
   const msg = err instanceof Error ? err.message : String(err);
@@ -16,56 +19,123 @@ function isStaleConnectionError(err: unknown): boolean {
 export class FtpFileSystemProvider implements vscode.FileSystemProvider {
   private readonly _onDidChangeFile = new vscode.EventEmitter<vscode.FileChangeEvent[]>();
   readonly onDidChangeFile = this._onDidChangeFile.event;
+  private readonly remoteBaselines = new Map<string, { mtime: number; size: number }>();
+  private readonly overwritePromptBypassUris = new Set<string>();
 
-  constructor(private readonly connectionManager: ConnectionManager) {}
+  constructor(
+    private readonly connectionManager: ConnectionManager,
+    private readonly statusBarItem?: vscode.StatusBarItem,
+  ) {}
 
-  watch(): vscode.Disposable {
+  watch(_uri: vscode.Uri, _options: { recursive: boolean; excludes: readonly string[] }): vscode.Disposable {
     return new vscode.Disposable(() => { /* no-op */ });
   }
 
-  /**
-   * Runs `fn` with an active client. If the operation throws a stale-connection
-   * error (server sent FIN, ECONNRESET, etc.), reconnects once and retries.
-   */
   private async withAutoReconnect<T>(
     connectionId: string,
     fn: (client: IFtpClient) => Promise<T>,
+    _remotePath?: string,
   ): Promise<T> {
-    const client = this.connectionManager.getClient(connectionId);
-    if (!client) throw vscode.FileSystemError.Unavailable(connectionId);
+    let client = this.connectionManager.getClient(connectionId);
+    if (!client) {
+      const connection = this.connectionManager.getConnection(connectionId);
+      const connectionName = connection?.name ?? connectionId;
+      try {
+        await this.connectionManager.connect(connectionId);
+        client = this.connectionManager.getClient(connectionId);
+      } catch (err) {
+        void vscode.window.showWarningMessage(
+          vscode.l10n.t(
+            'Connection lost for "{0}": {1}',
+            connectionName,
+            err instanceof Error ? err.message : String(err),
+          ),
+          vscode.l10n.t('Retry'),
+          vscode.l10n.t('Edit connection'),
+        ).then(async (choice) => {
+          if (choice === vscode.l10n.t('Retry')) {
+            try {
+              await this.connectionManager.reconnect(connectionId);
+            } catch (retryErr) {
+              vscode.window.showErrorMessage(
+                vscode.l10n.t(
+                  'Failed to reconnect "{0}": {1}',
+                  connectionName,
+                  retryErr instanceof Error ? retryErr.message : String(retryErr),
+                ),
+              );
+            }
+          } else if (choice === vscode.l10n.t('Edit connection')) {
+            void vscode.commands.executeCommand('ftpmanager.editServer', { connectionId });
+          }
+        });
+        throw err;
+      }
+      if (!client) throw vscode.FileSystemError.Unavailable(connectionId);
+    }
+
     try {
       return await fn(client);
     } catch (err) {
       if (!isStaleConnectionError(err)) throw err;
-      await this.connectionManager.reconnect(connectionId);
-      const freshClient = this.connectionManager.getClient(connectionId);
-      if (!freshClient) throw vscode.FileSystemError.Unavailable(connectionId);
-      return await fn(freshClient);
+
+      const connection = this.connectionManager.getConnection(connectionId);
+      const connectionName = connection?.name ?? connectionId;
+
+      try {
+        await this.connectionManager.reconnect(connectionId);
+        const freshClient = this.connectionManager.getClient(connectionId);
+        if (!freshClient) throw vscode.FileSystemError.Unavailable(connectionId);
+        return await fn(freshClient);
+      } catch (reconnectErr) {
+        void vscode.window.showWarningMessage(
+          vscode.l10n.t(
+            'Connection lost for "{0}": {1}',
+            connectionName,
+            reconnectErr instanceof Error ? reconnectErr.message : String(reconnectErr),
+          ),
+          vscode.l10n.t('Retry'),
+          vscode.l10n.t('Edit connection'),
+        ).then(async (choice) => {
+          if (choice === vscode.l10n.t('Retry')) {
+            try {
+              await this.connectionManager.reconnect(connectionId);
+            } catch (retryErr) {
+              vscode.window.showErrorMessage(
+                vscode.l10n.t(
+                  'Failed to reconnect "{0}": {1}',
+                  connectionName,
+                  retryErr instanceof Error ? retryErr.message : String(retryErr),
+                ),
+              );
+            }
+          } else if (choice === vscode.l10n.t('Edit connection')) {
+            void vscode.commands.executeCommand('ftpmanager.editServer', { connectionId });
+          }
+        });
+        throw reconnectErr;
+      }
     }
   }
 
   async stat(uri: vscode.Uri): Promise<vscode.FileStat> {
     const { connectionId, remotePath } = this.parseUri(uri);
 
-    // Root path '/' has no parent to list — return a directory stat directly
     if (remotePath === '/' || remotePath === '') {
       return { type: vscode.FileType.Directory, ctime: 0, mtime: 0, size: 0 };
     }
 
-    const parentPath = path.posix.dirname(remotePath);
-    const name = path.posix.basename(remotePath);
-
     return this.withAutoReconnect(connectionId, async (client) => {
-      const entries = await client.list(parentPath);
-      const entry = entries.find((e) => e.name === name);
+      const entry = await this.getRemoteEntry(client, remotePath);
       if (!entry) throw vscode.FileSystemError.FileNotFound(uri);
+      this.rememberBaseline(uri, entry, { overwrite: false });
       return {
         type: entry.type === 'directory' ? vscode.FileType.Directory : vscode.FileType.File,
         ctime: 0,
         mtime: entry.modifiedAt.getTime(),
         size: entry.size,
       };
-    });
+    }, remotePath);
   }
 
   async readDirectory(uri: vscode.Uri): Promise<[string, vscode.FileType][]> {
@@ -78,15 +148,17 @@ export class FtpFileSystemProvider implements vscode.FileSystemProvider {
           e.name,
           e.type === 'directory' ? vscode.FileType.Directory : vscode.FileType.File,
         ]);
-    });
+    }, remotePath);
   }
 
   async readFile(uri: vscode.Uri): Promise<Uint8Array> {
     const { connectionId, remotePath } = this.parseUri(uri);
     return this.withAutoReconnect(connectionId, async (client) => {
       const content = await client.getContent(remotePath);
+      const entry = await this.getRemoteEntry(client, remotePath);
+      this.rememberBaseline(uri, entry);
       return new Uint8Array(content);
-    });
+    }, remotePath);
   }
 
   async writeFile(
@@ -96,19 +168,30 @@ export class FtpFileSystemProvider implements vscode.FileSystemProvider {
   ): Promise<void> {
     const { connectionId, remotePath } = this.parseUri(uri);
 
-    await this.withAutoReconnect(connectionId, async (client) => {
-      // 기존 파일이 있을 수 있는 경우에만 퍼미션 조회
-      // create:false(덮어쓰기 전용) 또는 create:true,overwrite:true(기존 파일 덮어쓰기 허용) 모두 해당
+    const uploaded = await this.withAutoReconnect(connectionId, async (client) => {
       let originalPerms: string | undefined;
+      let currentEntry: RemoteFileEntry | undefined;
+
       if (!options.create || options.overwrite) {
-        try {
-          const parentDir = path.posix.dirname(remotePath);
-          const fileName = path.posix.basename(remotePath);
-          const entries = await client.list(parentDir);
-          originalPerms = entries.find((e) => e.name === fileName)?.permissions;
-        } catch {
-          // 조회 실패 시 퍼미션 없이 계속 진행
-        }
+        currentEntry = await this.getRemoteEntry(client, remotePath);
+        originalPerms = currentEntry?.permissions;
+      }
+
+      const baseline = this.remoteBaselines.get(uri.toString());
+      const connection = this.connectionManager.getConnection(connectionId);
+      const shouldAskBeforeOverwrite = connection?.compareBeforeOverwrite === true;
+      const bypassPrompt = this.overwritePromptBypassUris.delete(uri.toString());
+      if (!bypassPrompt && currentEntry && currentEntry.type !== 'directory' && (baseline || shouldAskBeforeOverwrite)) {
+        const shouldSave = await this.confirmOverwriteChoice(
+          client,
+          connectionId,
+          remotePath,
+          content,
+          currentEntry,
+          baseline,
+          shouldAskBeforeOverwrite,
+        );
+        if (!shouldSave) return false;
       }
 
       await client.putContent(Buffer.from(content), remotePath);
@@ -116,26 +199,69 @@ export class FtpFileSystemProvider implements vscode.FileSystemProvider {
       if (originalPerms) {
         await client.chmod(remotePath, originalPerms).catch(() => {});
       }
-    });
+
+      const updatedEntry = await this.getRemoteEntry(client, remotePath);
+      this.rememberBaseline(uri, updatedEntry);
+      return true;
+    }, remotePath);
+
+    if (!uploaded) {
+      // The user declined the overwrite (Cancel/Compare). Returning normally
+      // would let VS Code mark the document as saved/clean even though nothing
+      // was uploaded, silently dropping the dirty indicator on the unsaved edit.
+      // Throwing a CancellationError keeps the document dirty without surfacing a
+      // failed-save error toast.
+      throw new vscode.CancellationError();
+    }
 
     this._onDidChangeFile.fire([{ type: vscode.FileChangeType.Changed, uri }]);
+    this.showUploadFeedback(connectionId, remotePath);
+  }
+
+  async confirmRemoteSave(uri: vscode.Uri, content: Uint8Array): Promise<boolean> {
+    const { connectionId, remotePath } = this.parseUri(uri);
+
+    return this.withAutoReconnect(connectionId, async (client) => {
+      const currentEntry = await this.getRemoteEntry(client, remotePath);
+      const baseline = this.remoteBaselines.get(uri.toString());
+      const connection = this.connectionManager.getConnection(connectionId);
+      const shouldAskBeforeOverwrite = connection?.compareBeforeOverwrite === true;
+
+      if (!currentEntry || currentEntry.type === 'directory' || (!baseline && !shouldAskBeforeOverwrite)) {
+        return true;
+      }
+
+      return this.confirmOverwriteChoice(
+        client,
+        connectionId,
+        remotePath,
+        content,
+        currentEntry,
+        baseline,
+        shouldAskBeforeOverwrite,
+      );
+    }, remotePath);
+  }
+
+  bypassNextOverwritePrompt(uri: vscode.Uri): void {
+    this.overwritePromptBypassUris.add(uri.toString());
   }
 
   async createDirectory(uri: vscode.Uri): Promise<void> {
     const { connectionId, remotePath } = this.parseUri(uri);
-    await this.withAutoReconnect(connectionId, (client) => client.mkdir(remotePath));
+    await this.withAutoReconnect(connectionId, (client) => client.mkdir(remotePath), remotePath);
   }
 
   async delete(uri: vscode.Uri, options: { recursive: boolean }): Promise<void> {
     const { connectionId, remotePath } = this.parseUri(uri);
-    const stat = await this.stat(uri); // already auto-reconnects if needed
+    const stat = await this.stat(uri);
     await this.withAutoReconnect(connectionId, async (client) => {
       if (stat.type === vscode.FileType.Directory) {
         await client.rmdir(remotePath, options.recursive);
       } else {
         await client.delete(remotePath);
       }
-    });
+    }, remotePath);
     this._onDidChangeFile.fire([{ type: vscode.FileChangeType.Deleted, uri }]);
   }
 
@@ -146,7 +272,7 @@ export class FtpFileSystemProvider implements vscode.FileSystemProvider {
   ): Promise<void> {
     const { connectionId, remotePath: oldPath } = this.parseUri(oldUri);
     const { remotePath: newPath } = this.parseUri(newUri);
-    await this.withAutoReconnect(connectionId, (client) => client.rename(oldPath, newPath));
+    await this.withAutoReconnect(connectionId, (client) => client.rename(oldPath, newPath), oldPath);
     this._onDidChangeFile.fire([
       { type: vscode.FileChangeType.Deleted, uri: oldUri },
       { type: vscode.FileChangeType.Created, uri: newUri },
@@ -157,6 +283,119 @@ export class FtpFileSystemProvider implements vscode.FileSystemProvider {
     const connectionId = uri.authority;
     const remotePath = uri.path || '/';
     return { connectionId, remotePath };
+  }
+
+  private async getRemoteEntry(client: IFtpClient, remotePath: string): Promise<RemoteFileEntry | undefined> {
+    const parentPath = path.posix.dirname(remotePath);
+    const name = path.posix.basename(remotePath);
+    try {
+      const entries = await client.list(parentPath);
+      return entries.find((entry) => entry.name === name);
+    } catch {
+      return undefined;
+    }
+  }
+
+  private rememberBaseline(
+    uri: vscode.Uri,
+    entry: RemoteFileEntry | undefined,
+    options: { overwrite?: boolean } = {},
+  ): void {
+    if (!entry) return;
+    const key = uri.toString();
+    // The baseline must capture the remote state at *open* time so we can later
+    // detect whether the remote changed underneath the editor. stat() runs many
+    // times during a session, so it must not clobber an existing baseline with a
+    // newer (already-changed) remote state — that would silently defeat the
+    // overwrite-changed detection. readFile()/post-save explicitly reset it.
+    if (options.overwrite === false && this.remoteBaselines.has(key)) return;
+    this.remoteBaselines.set(key, {
+      mtime: entry.modifiedAt?.getTime?.() ?? 0,
+      size: entry.size ?? 0,
+    });
+  }
+
+  private async confirmOverwriteChoice(
+    client: IFtpClient,
+    connectionId: string,
+    remotePath: string,
+    content: Uint8Array,
+    currentEntry: RemoteFileEntry,
+    baseline: { mtime: number; size: number } | undefined,
+    shouldAskBeforeOverwrite: boolean,
+  ): Promise<boolean> {
+    const currentMtime = currentEntry.modifiedAt?.getTime?.() ?? 0;
+    const currentSize = currentEntry.size ?? 0;
+    const changedByTime = Boolean(baseline && currentMtime && baseline.mtime && currentMtime > baseline.mtime + 2000);
+    const changedBySize = Boolean(baseline && currentSize !== baseline.size && currentMtime !== baseline.mtime);
+
+    if (!shouldAskBeforeOverwrite && !changedByTime && !changedBySize) {
+      return true;
+    }
+
+    const connection = this.connectionManager.getConnection(connectionId);
+    const serverName = connection?.name ?? connectionId;
+    const prompt = shouldAskBeforeOverwrite
+      ? 'Overwrite remote file "{0}" on {1}?'
+      : 'The remote file "{0}" on {1} changed since it was opened. Overwrite it?';
+    const choice = await vscode.window.showWarningMessage(
+      vscode.l10n.t(
+        prompt,
+        path.posix.basename(remotePath),
+        serverName,
+      ),
+      { modal: true },
+      vscode.l10n.t('Overwrite'),
+      vscode.l10n.t('Compare'),
+      vscode.l10n.t('Cancel'),
+    );
+
+    if (choice === vscode.l10n.t('Compare')) {
+      await this.openRemoteOverwriteDiff(client, remotePath, content);
+      return false;
+    }
+
+    return choice === vscode.l10n.t('Overwrite');
+  }
+
+  private async openRemoteOverwriteDiff(
+    client: IFtpClient,
+    remotePath: string,
+    localContent: Uint8Array,
+  ): Promise<void> {
+    const fileName = path.posix.basename(remotePath) || 'remote-file';
+    const tempRoot = vscode.Uri.file(path.join(os.tmpdir(), `ftpmanager-compare-${randomUUID()}`));
+    await vscode.workspace.fs.createDirectory(tempRoot);
+
+    const remoteTemp = vscode.Uri.joinPath(tempRoot, `remote-${fileName}`);
+    const localTemp = vscode.Uri.joinPath(tempRoot, `local-${fileName}`);
+    const remoteContent = await client.getContent(remotePath);
+
+    await vscode.workspace.fs.writeFile(remoteTemp, new Uint8Array(remoteContent));
+    await vscode.workspace.fs.writeFile(localTemp, localContent);
+    await vscode.commands.executeCommand(
+      'vscode.diff',
+      remoteTemp,
+      localTemp,
+      vscode.l10n.t('Remote vs Local: {0}', fileName),
+    );
+  }
+
+  private showUploadFeedback(connectionId: string, remotePath: string): void {
+    const connection = this.connectionManager.getConnection(connectionId);
+    const serverName = connection?.name ?? connectionId;
+    const fileName = path.posix.basename(remotePath);
+    const savedAt = new Date().toLocaleTimeString();
+
+    if (this.statusBarItem) {
+      this.statusBarItem.text = `$(cloud-upload) FTPManager: ${fileName} saved ${savedAt}`;
+      this.statusBarItem.tooltip = `${serverName}${remotePath}\nLast remote save: ${savedAt}`;
+      this.statusBarItem.show();
+    }
+
+    vscode.window.showInformationMessage(
+      `✓ ${fileName} uploaded to ${serverName}`,
+    );
   }
 
   dispose(): void {
