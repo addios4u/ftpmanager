@@ -5,3 +5,5 @@ node_modules/**
 esbuild.mjs
 tsconfig.json
 .npmrc
+.omc/**
+**/*.vsix
