@@ -109,6 +109,13 @@ export const FileType = {
   SymbolicLink: 64,
 };
 
+export class CancellationError extends Error {
+  constructor() {
+    super('Canceled');
+    this.name = 'Canceled';
+  }
+}
+
 export class FileSystemError extends Error {
   static FileNotFound(msg?: string | { toString(): string }) {
     return new FileSystemError(`FileNotFound: ${msg}`);

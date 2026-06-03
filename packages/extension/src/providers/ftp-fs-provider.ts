@@ -128,7 +128,7 @@ export class FtpFileSystemProvider implements vscode.FileSystemProvider {
     return this.withAutoReconnect(connectionId, async (client) => {
       const entry = await this.getRemoteEntry(client, remotePath);
       if (!entry) throw vscode.FileSystemError.FileNotFound(uri);
-      this.rememberBaseline(uri, entry);
+      this.rememberBaseline(uri, entry, { overwrite: false });
       return {
         type: entry.type === 'directory' ? vscode.FileType.Directory : vscode.FileType.File,
         ctime: 0,
@@ -205,7 +205,14 @@ export class FtpFileSystemProvider implements vscode.FileSystemProvider {
       return true;
     }, remotePath);
 
-    if (!uploaded) return;
+    if (!uploaded) {
+      // The user declined the overwrite (Cancel/Compare). Returning normally
+      // would let VS Code mark the document as saved/clean even though nothing
+      // was uploaded, silently dropping the dirty indicator on the unsaved edit.
+      // Throwing a CancellationError keeps the document dirty without surfacing a
+      // failed-save error toast.
+      throw new vscode.CancellationError();
+    }
 
     this._onDidChangeFile.fire([{ type: vscode.FileChangeType.Changed, uri }]);
     this.showUploadFeedback(connectionId, remotePath);
@@ -289,9 +296,20 @@ export class FtpFileSystemProvider implements vscode.FileSystemProvider {
     }
   }
 
-  private rememberBaseline(uri: vscode.Uri, entry: RemoteFileEntry | undefined): void {
+  private rememberBaseline(
+    uri: vscode.Uri,
+    entry: RemoteFileEntry | undefined,
+    options: { overwrite?: boolean } = {},
+  ): void {
     if (!entry) return;
-    this.remoteBaselines.set(uri.toString(), {
+    const key = uri.toString();
+    // The baseline must capture the remote state at *open* time so we can later
+    // detect whether the remote changed underneath the editor. stat() runs many
+    // times during a session, so it must not clobber an existing baseline with a
+    // newer (already-changed) remote state — that would silently defeat the
+    // overwrite-changed detection. readFile()/post-save explicitly reset it.
+    if (options.overwrite === false && this.remoteBaselines.has(key)) return;
+    this.remoteBaselines.set(key, {
       mtime: entry.modifiedAt?.getTime?.() ?? 0,
       size: entry.size ?? 0,
     });

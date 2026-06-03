@@ -45,6 +45,10 @@ function makeMockClient(overrides: Partial<IFtpClient> = {}): IFtpClient {
 function makeMockManager(clients: Record<string, IFtpClient> = {}): ConnectionManager {
   return {
     getClient: vi.fn((id: string) => clients[id]),
+    getConnection: vi.fn(() => undefined),
+    connect: vi.fn(async () => {}),
+    reconnect: vi.fn(async () => {}),
+    isConnected: vi.fn(() => false),
   } as unknown as ConnectionManager;
 }
 
