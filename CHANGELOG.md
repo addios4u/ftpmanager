@@ -1,5 +1,28 @@
 # Changelog
 
+## [1.3.0] - 2026-06-03
+
+Big thanks to [@gendronsteph](https://github.com/gendronsteph) for contributing this feature set ([#3](https://github.com/addios4u/ftpmanager/pull/3)).
+
+### Added
+- **Remote file restoration on startup** — previously opened `ftpmanager://` files are reopened after restarting VS Code. The extension now activates on `onFileSystem:ftpmanager` and automatically reconnects only the servers needed by the restored tabs, with a clear warning if a reconnect fails.
+- **Reconnect Open Files** — a new command and view-title button (`$(plug)`) that reconnects only the servers required by the currently open remote files.
+- **Server groups** — set an optional **Group** on a connection to organize servers under group sections in the tree (e.g. Clients, Production, Staging).
+- **Remote overwrite protection** — the remote file's state is captured when opened; before saving, if the remote appears to have changed since then, you're prompted to **Overwrite**, **Compare**, or **Cancel**.
+- **Compare before overwrite** — an optional per-server "Ask to compare before overwrite" setting. **Compare** downloads the current remote version to a temp file and opens a VS Code diff against your local edits. For `ftpmanager://` files, `Ctrl/Cmd+S` is handled so that Compare/Cancel keep the editor dirty and only Overwrite uploads — no failed-save toast.
+- **Configuration import/export** — the top tree button is now a **Configurations** gear, with **Import**/**Export** for saved servers. Export includes saved passwords/passphrases (keep the file private); import adds new servers and replaces any that already exist.
+- **Theme-based file icons** — tree items expose a `resourceUri` so remote files/folders use your active File Icon Theme (`.php`, `.js`, `.css`, `.json`, `.htaccess`, …).
+- **Upload feedback** — a success notification after a remote save, plus a status bar entry showing the last saved file and time (tooltip includes server name, remote path, and time).
+- **Tree view visual indicators** — connected servers show a green icon, and open remote files are highlighted in the tree (without recoloring editor tabs).
+- **Permanent tabs for remote files** — remote files open with `preview: false`, so same-named files from different servers (e.g. two `index.php`) can stay open at once.
+
+### Changed
+- **Tree view reveal support** — added `getParent()` and stable, path-based item IDs so restored remote files can be reliably revealed and expanded to the correct server and parent folders.
+
+### Fixed
+- **Dirty state preserved on declined overwrite** — declining an overwrite (Cancel/Compare) no longer lets VS Code mark the document as saved; unsaved edits keep their dirty indicator across all save paths (menu save, save-all, auto-save).
+- **Reliable change detection** — the remote baseline is captured once when a file is opened and only reset after a successful upload, so repeated `stat()` calls during editing no longer suppress the "remote changed since it was opened" prompt.
+
 ## [1.2.4] - 2026-04-16
 
 ### Added
