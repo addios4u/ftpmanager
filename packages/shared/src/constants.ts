@@ -1,5 +1,6 @@
 export const VIEW_IDS = {
   SERVERS: 'ftpmanager.servers',
+  ACTIVITY_SERVERS: 'ftpmanager.activityServers',
 } as const;
 
 export const COMMAND_IDS = {

@@ -14,6 +14,8 @@ export interface FtpConnectionConfig {
   secure?: boolean;        // FTPS explicit TLS
   passiveMode?: boolean;   // FTP passive mode
   compareBeforeOverwrite?: boolean;
+  defaultFilePermissions?: string;
+  defaultFolderPermissions?: string;
 }
 
 export interface FtpConnectionInfo extends FtpConnectionConfig {

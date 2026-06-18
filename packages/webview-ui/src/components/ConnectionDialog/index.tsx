@@ -18,6 +18,8 @@ const emptyConfig = (): FtpConnectionConfig => ({
   username: '',
   remotePath: '',
   passiveMode: true,
+  defaultFilePermissions: '644',
+  defaultFolderPermissions: '755',
 });
 
 export function ConnectionDialog({ editId }: Props) {
@@ -187,6 +189,35 @@ export function ConnectionDialog({ editId }: Props) {
           </label>
           <small style={{ opacity: 0.7 }}>
             When enabled, saving an existing remote file asks whether to overwrite, compare, or cancel.
+          </small>
+        </div>
+
+        <div className="permissions-section">
+          <h3>Default Permissions</h3>
+          <div className="form-row">
+            <div className="form-group flex-1">
+              <label>Files</label>
+              <input
+                type="text"
+                value={config.defaultFilePermissions ?? '644'}
+                onChange={(e) => setConfig((c) => ({ ...c, defaultFilePermissions: e.target.value.trim() || undefined }))}
+                placeholder="644"
+                pattern="[0-7]{3,4}"
+              />
+            </div>
+            <div className="form-group flex-1">
+              <label>Folders</label>
+              <input
+                type="text"
+                value={config.defaultFolderPermissions ?? '755'}
+                onChange={(e) => setConfig((c) => ({ ...c, defaultFolderPermissions: e.target.value.trim() || undefined }))}
+                placeholder="755"
+                pattern="[0-7]{3,4}"
+              />
+            </div>
+          </div>
+          <small>
+            Used as the suggested chmod value for uploads and new folders. You can still choose another value each time.
           </small>
         </div>
 

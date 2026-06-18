@@ -3,7 +3,12 @@ import { useConnectionStore } from '../../stores/connection.js';
 import { postMessage } from '../../vscode-api.js';
 
 export function WelcomeView() {
-  const { connections, setViewState } = useConnectionStore();
+  const { connections, viewLocation, setViewState, setViewLocation } = useConnectionStore();
+
+  const updateViewLocation = (nextLocation: 'explorer' | 'activityBar') => {
+    setViewLocation(nextLocation);
+    postMessage({ type: 'updateViewLocation', viewLocation: nextLocation });
+  };
 
   return (
     <div className="welcome-view">
@@ -19,7 +24,30 @@ export function WelcomeView() {
         <button onClick={() => postMessage({ type: 'exportConnections' })}>
           Export
         </button>
-        <span>Exports include saved passwords.</span>
+      </div>
+      <div className="security-warning">
+        Export files include saved passwords. Keep exported JSON files private and only import files you trust.
+      </div>
+
+      <div className="view-location-setting">
+        <div>
+          <h2>View Location</h2>
+          <p>Choose where the FTPManager tree is shown.</p>
+        </div>
+        <div className="segmented-control" role="group" aria-label="FTPManager view location">
+          <button
+            className={viewLocation === 'explorer' ? 'active' : ''}
+            onClick={() => updateViewLocation('explorer')}
+          >
+            Explorer
+          </button>
+          <button
+            className={viewLocation === 'activityBar' ? 'active' : ''}
+            onClick={() => updateViewLocation('activityBar')}
+          >
+            Activity Bar
+          </button>
+        </div>
       </div>
 
       {connections.length > 0 && (

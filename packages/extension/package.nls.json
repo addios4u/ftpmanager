@@ -1,5 +1,6 @@
 {
   "viewName.servers": "FTP Manager",
+  "viewContainer.ftpManager": "FTP Manager",
   "category.ftpManager": "FTP Manager",
   "command.addServer": "Configurations",
   "command.editServer": "Edit Server",

@@ -23,13 +23,25 @@ export class WebviewPanelManager {
     private readonly connectionManager: ConnectionManager,
   ) {}
 
+  private getViewLocation(): 'explorer' | 'activityBar' {
+    const configured = vscode.workspace
+      .getConfiguration('ftpmanager')
+      .get<string>('viewLocation', 'explorer');
+    return configured === 'activityBar' ? 'activityBar' : 'explorer';
+  }
+
+  private postStateSync(): void {
+    this.panel?.webview.postMessage({
+      type: 'stateSync',
+      connections: this.connectionManager.getConnectionInfos(),
+      viewLocation: this.getViewLocation(),
+    });
+  }
+
   openConnectionDialog(editId?: string): void {
     if (this.panel) {
       this.panel.reveal(vscode.ViewColumn.One);
-      this.panel.webview.postMessage({
-        type: 'stateSync',
-        connections: this.connectionManager.getConnectionInfos(),
-      });
+      this.postStateSync();
       if (editId) {
         this.panel.webview.postMessage({ type: 'openEdit', editId });
       }
@@ -75,10 +87,7 @@ export class WebviewPanelManager {
   private async handleMessage(msg: WebviewMessage): Promise<void> {
     switch (msg.type) {
       case 'ready': {
-        this.panel?.webview.postMessage({
-          type: 'stateSync',
-          connections: this.connectionManager.getConnectionInfos(),
-        });
+        this.postStateSync();
         if (this.pendingEditId) {
           this.panel?.webview.postMessage({ type: 'openEdit', editId: this.pendingEditId });
           this.pendingEditId = undefined;
@@ -88,19 +97,13 @@ export class WebviewPanelManager {
 
       case 'saveConnection': {
         await this.connectionManager.saveConnection(msg.config, msg.password, msg.passphrase);
-        this.panel?.webview.postMessage({
-          type: 'stateSync',
-          connections: this.connectionManager.getConnectionInfos(),
-        });
+        this.postStateSync();
         break;
       }
 
       case 'deleteConnection': {
         await this.connectionManager.deleteConnection(msg.connectionId);
-        this.panel?.webview.postMessage({
-          type: 'stateSync',
-          connections: this.connectionManager.getConnectionInfos(),
-        });
+        this.postStateSync();
         break;
       }
 
@@ -111,6 +114,22 @@ export class WebviewPanelManager {
 
       case 'importConnections': {
         await this.importConnections();
+        break;
+      }
+
+      case 'updateViewLocation': {
+        await vscode.workspace
+          .getConfiguration('ftpmanager')
+          .update('viewLocation', msg.viewLocation, vscode.ConfigurationTarget.Global);
+        this.postStateSync();
+        vscode.window.showInformationMessage(
+          'FTPManager view location updated. Reload the window if the Activity Bar does not update immediately.',
+          'Reload Window',
+        ).then((choice) => {
+          if (choice === 'Reload Window') {
+            void vscode.commands.executeCommand('workbench.action.reloadWindow');
+          }
+        });
         break;
       }
 
@@ -164,6 +183,13 @@ export class WebviewPanelManager {
   }
 
   private async exportConnections(): Promise<void> {
+    const confirm = await vscode.window.showWarningMessage(
+      'FTPManager exports include saved passwords. Keep the exported JSON file private.',
+      { modal: true },
+      'Export Servers',
+    );
+    if (confirm !== 'Export Servers') return;
+
     const destination = await vscode.window.showSaveDialog({
       defaultUri: vscode.Uri.file('ftpmanager-servers.json'),
       saveLabel: 'Export Servers',
@@ -188,6 +214,13 @@ export class WebviewPanelManager {
   }
 
   private async importConnections(): Promise<void> {
+    const confirm = await vscode.window.showWarningMessage(
+      'Only import FTPManager server files you trust. Imported files can replace existing server settings and passwords.',
+      { modal: true },
+      'Import Servers',
+    );
+    if (confirm !== 'Import Servers') return;
+
     const files = await vscode.window.showOpenDialog({
       canSelectFiles: true,
       canSelectFolders: false,
@@ -208,10 +241,7 @@ export class WebviewPanelManager {
     }
 
     await this.connectionManager.importConnections(parsed.connections);
-    this.panel?.webview.postMessage({
-      type: 'stateSync',
-      connections: this.connectionManager.getConnectionInfos(),
-    });
+    this.postStateSync();
     vscode.window.showInformationMessage(`Imported ${parsed.connections.length} FTPManager server(s).`);
   }
 

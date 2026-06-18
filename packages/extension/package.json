@@ -31,11 +31,42 @@
   "main": "./dist/extension.js",
   "l10n": "./l10n",
   "contributes": {
+    "configuration": {
+      "title": "FTPManager",
+      "properties": {
+        "ftpmanager.viewLocation": {
+          "type": "string",
+          "enum": [
+            "explorer",
+            "activityBar"
+          ],
+          "default": "explorer",
+          "markdownDescription": "Controls where the FTPManager tree is shown. Use `explorer` to keep it in the Explorer panel, or `activityBar` to show it in its own Activity Bar view."
+        }
+      }
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "ftpmanagerActivity",
+          "title": "%viewContainer.ftpManager%",
+          "icon": "resources/icons/ftp.svg"
+        }
+      ]
+    },
     "views": {
       "explorer": [
         {
           "id": "ftpmanager.servers",
-          "name": "%viewName.servers%"
+          "name": "%viewName.servers%",
+          "when": "config.ftpmanager.viewLocation == explorer"
+        }
+      ],
+      "ftpmanagerActivity": [
+        {
+          "id": "ftpmanager.activityServers",
+          "name": "%viewName.servers%",
+          "when": "config.ftpmanager.viewLocation == activityBar"
         }
       ]
     },
@@ -176,124 +207,124 @@
       "view/title": [
         {
           "command": "ftpmanager.addServer",
-          "when": "view == ftpmanager.servers",
+          "when": "view == ftpmanager.servers || view == ftpmanager.activityServers",
           "group": "navigation"
         },
         {
           "command": "ftpmanager.refresh",
-          "when": "view == ftpmanager.servers",
+          "when": "view == ftpmanager.servers || view == ftpmanager.activityServers",
           "group": "navigation"
         },
         {
           "command": "ftpmanager.reconnectOpenFiles",
-          "when": "view == ftpmanager.servers",
+          "when": "view == ftpmanager.servers || view == ftpmanager.activityServers",
           "group": "navigation"
         },
         {
           "command": "ftpmanager.revealOpenFiles",
-          "when": "view == ftpmanager.servers",
+          "when": "view == ftpmanager.servers || view == ftpmanager.activityServers",
           "group": "navigation"
         },
         {
           "command": "ftpmanager.searchFiles",
-          "when": "view == ftpmanager.servers",
+          "when": "view == ftpmanager.servers || view == ftpmanager.activityServers",
           "group": "navigation"
         }
       ],
       "view/item/context": [
         {
           "command": "ftpmanager.connect",
-          "when": "view == ftpmanager.servers && viewItem == server-disconnected",
+          "when": "(view == ftpmanager.servers || view == ftpmanager.activityServers) && viewItem == server-disconnected",
           "group": "inline"
         },
         {
           "command": "ftpmanager.disconnect",
-          "when": "view == ftpmanager.servers && viewItem == server-connected",
+          "when": "(view == ftpmanager.servers || view == ftpmanager.activityServers) && viewItem == server-connected",
           "group": "inline"
         },
         {
           "command": "ftpmanager.refresh",
-          "when": "view == ftpmanager.servers && viewItem =~ /server-connected|directory/",
+          "when": "(view == ftpmanager.servers || view == ftpmanager.activityServers) && viewItem =~ /server-connected|directory/",
           "group": "inline"
         },
         {
           "command": "ftpmanager.uploadFile",
-          "when": "view == ftpmanager.servers && viewItem =~ /server-connected|directory/",
+          "when": "(view == ftpmanager.servers || view == ftpmanager.activityServers) && viewItem =~ /server-connected|directory/",
           "group": "inline"
         },
         {
           "command": "ftpmanager.editServer",
-          "when": "view == ftpmanager.servers && viewItem =~ /^server/",
+          "when": "(view == ftpmanager.servers || view == ftpmanager.activityServers) && viewItem =~ /^server/",
           "group": "1_server@1"
         },
         {
           "command": "ftpmanager.deleteServer",
-          "when": "view == ftpmanager.servers && viewItem =~ /^server/",
+          "when": "(view == ftpmanager.servers || view == ftpmanager.activityServers) && viewItem =~ /^server/",
           "group": "1_server@2"
         },
         {
           "command": "ftpmanager.connect",
-          "when": "view == ftpmanager.servers && viewItem == server-disconnected",
+          "when": "(view == ftpmanager.servers || view == ftpmanager.activityServers) && viewItem == server-disconnected",
           "group": "1_server@0"
         },
         {
           "command": "ftpmanager.disconnect",
-          "when": "view == ftpmanager.servers && viewItem == server-connected",
+          "when": "(view == ftpmanager.servers || view == ftpmanager.activityServers) && viewItem == server-connected",
           "group": "1_server@0"
         },
         {
           "command": "ftpmanager.uploadFile",
-          "when": "view == ftpmanager.servers && viewItem =~ /server-connected|directory/",
+          "when": "(view == ftpmanager.servers || view == ftpmanager.activityServers) && viewItem =~ /server-connected|directory/",
           "group": "2_transfer@1"
         },
         {
           "command": "ftpmanager.newFolder",
-          "when": "view == ftpmanager.servers && viewItem =~ /server-connected|directory/",
+          "when": "(view == ftpmanager.servers || view == ftpmanager.activityServers) && viewItem =~ /server-connected|directory/",
           "group": "2_transfer@3"
         },
         {
           "command": "ftpmanager.newFile",
-          "when": "view == ftpmanager.servers && viewItem =~ /server-connected|directory/",
+          "when": "(view == ftpmanager.servers || view == ftpmanager.activityServers) && viewItem =~ /server-connected|directory/",
           "group": "2_transfer@4"
         },
         {
           "command": "ftpmanager.downloadFile",
-          "when": "view == ftpmanager.servers && viewItem == file",
+          "when": "(view == ftpmanager.servers || view == ftpmanager.activityServers) && viewItem == file",
           "group": "2_transfer@1"
         },
         {
           "command": "ftpmanager.downloadFolder",
-          "when": "view == ftpmanager.servers && viewItem == directory",
+          "when": "(view == ftpmanager.servers || view == ftpmanager.activityServers) && viewItem == directory",
           "group": "2_transfer@2"
         },
         {
           "command": "ftpmanager.rename",
-          "when": "view == ftpmanager.servers && viewItem =~ /^file$|^directory$/",
+          "when": "(view == ftpmanager.servers || view == ftpmanager.activityServers) && viewItem =~ /^file$|^directory$/",
           "group": "3_edit@1"
         },
         {
           "command": "ftpmanager.duplicate",
-          "when": "view == ftpmanager.servers && viewItem =~ /^file$|^directory$/",
+          "when": "(view == ftpmanager.servers || view == ftpmanager.activityServers) && viewItem =~ /^file$|^directory$/",
           "group": "3_edit@1.5"
         },
         {
           "command": "ftpmanager.deleteRemote",
-          "when": "view == ftpmanager.servers && viewItem =~ /^file$|^directory$/",
+          "when": "(view == ftpmanager.servers || view == ftpmanager.activityServers) && viewItem =~ /^file$|^directory$/",
           "group": "3_edit@2"
         },
         {
           "command": "ftpmanager.copyRemotePath",
-          "when": "view == ftpmanager.servers && viewItem =~ /^file$|^directory$/",
+          "when": "(view == ftpmanager.servers || view == ftpmanager.activityServers) && viewItem =~ /^file$|^directory$/",
           "group": "4_misc@1"
         },
         {
           "command": "ftpmanager.chmod",
-          "when": "view == ftpmanager.servers && viewItem =~ /^file$|^directory$/",
+          "when": "(view == ftpmanager.servers || view == ftpmanager.activityServers) && viewItem =~ /^file$|^directory$/",
           "group": "9_chmod@1"
         },
         {
           "command": "ftpmanager.searchFiles",
-          "when": "view == ftpmanager.servers && viewItem == directory",
+          "when": "(view == ftpmanager.servers || view == ftpmanager.activityServers) && viewItem == directory",
           "group": "5_search@1"
         }
       ],
@@ -335,6 +366,7 @@
   "activationEvents": [
     "onFileSystem:ftpmanager",
     "onView:ftpmanager.servers",
+    "onView:ftpmanager.activityServers",
     "onCommand:ftpmanager.openRemoteFile",
     "onCommand:ftpmanager.connect",
     "onCommand:ftpmanager.addServer",

@@ -12,7 +12,15 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   ]);
 }
 
-export type FtpNodeType = 'group' | 'server' | 'directory' | 'file';
+export type FtpNodeType =
+  | 'openedFiles'
+  | 'openedFile'
+  | 'recentFiles'
+  | 'recentFile'
+  | 'group'
+  | 'server'
+  | 'directory'
+  | 'file';
 
 export interface FtpTreeNode {
   nodeType: FtpNodeType;
@@ -21,6 +29,7 @@ export interface FtpTreeNode {
   remotePath: string;
   permissions?: string;
   group?: string;
+  description?: string;
 }
 
 function getContextValue(node: FtpTreeNode, connectionManager: ConnectionManager): string {
@@ -37,6 +46,7 @@ function getCollapsibleState(nodeType: FtpNodeType): vscode.TreeItemCollapsibleS
     case 'group':
     case 'server':
     case 'directory':
+    case 'recentFiles':
       return vscode.TreeItemCollapsibleState.Collapsed;
     default:
       return vscode.TreeItemCollapsibleState.None;
@@ -48,6 +58,12 @@ function getIcon(
   connectionManager: ConnectionManager,
   extensionUri: vscode.Uri,
 ): vscode.ThemeIcon | { light: vscode.Uri; dark: vscode.Uri } {
+  if (node.nodeType === 'openedFiles') {
+    return new vscode.ThemeIcon('files');
+  }
+  if (node.nodeType === 'recentFiles') {
+    return new vscode.ThemeIcon('history');
+  }
   if (node.nodeType === 'group') {
     return new vscode.ThemeIcon('folder-library');
   }
@@ -79,6 +95,9 @@ export class FtpTreeProvider
   constructor(
     private readonly connectionManager: ConnectionManager,
     private readonly extensionUri: vscode.Uri,
+    private readonly getOpenRemoteFileUris: () => string[] = () => [],
+    private readonly getRecentRemoteFileUris: () => string[] = () => [],
+    private readonly shouldShowOpenedFiles: () => boolean = () => false,
   ) {
     this.connectionManager.onDidChangeConnections(() => this._onDidChangeTreeData.fire(null));
     this.connectionManager.onDidChangeConnectionState(({ connectionId, connected }) => {
@@ -139,6 +158,17 @@ export class FtpTreeProvider
     item.contextValue = getContextValue(node, this.connectionManager);
     item.iconPath = getIcon(node, this.connectionManager, this.extensionUri);
     item.id = this.getNodeId(node);
+    item.description = node.description;
+
+    if (node.nodeType === 'openedFiles') {
+      item.id = 'opened-files';
+      item.contextValue = 'openedFiles';
+    }
+
+    if (node.nodeType === 'recentFiles') {
+      item.id = 'recent-files';
+      item.contextValue = 'recentFiles';
+    }
 
     if (node.nodeType === 'server') {
       const gen = this.disconnectGen.get(node.connectionId) ?? 0;
@@ -153,7 +183,12 @@ export class FtpTreeProvider
       item.contextValue = 'group';
     }
 
-    if (node.nodeType === 'file' || node.nodeType === 'directory') {
+    if (
+      node.nodeType === 'file' ||
+      node.nodeType === 'directory' ||
+      node.nodeType === 'openedFile' ||
+      node.nodeType === 'recentFile'
+    ) {
       item.resourceUri = vscode.Uri.parse(`ftpmanager-tree://${node.connectionId}${node.remotePath}`);
     }
 
@@ -161,7 +196,7 @@ export class FtpTreeProvider
       item.description = `(${node.permissions})`;
     }
 
-    if (node.nodeType === 'file') {
+    if (node.nodeType === 'file' || node.nodeType === 'openedFile' || node.nodeType === 'recentFile') {
       item.command = {
         command: 'ftpmanager.openRemoteFile',
         title: 'Open Remote File',
@@ -173,6 +208,21 @@ export class FtpTreeProvider
   }
 
   getParent(node: FtpTreeNode): FtpTreeNode | undefined {
+    if (node.nodeType === 'openedFiles') return undefined;
+
+    if (node.nodeType === 'openedFile') return undefined;
+
+    if (node.nodeType === 'recentFiles') return undefined;
+
+    if (node.nodeType === 'recentFile') {
+      return {
+        nodeType: 'recentFiles',
+        label: vscode.l10n.t('Recent Files'),
+        connectionId: '',
+        remotePath: '',
+      };
+    }
+
     if (node.nodeType === 'group') return undefined;
 
     if (node.nodeType === 'server') {
@@ -229,6 +279,8 @@ export class FtpTreeProvider
       return this.getRootNodes();
     }
     switch (node.nodeType) {
+      case 'recentFiles':
+        return this.getRecentFileChildren();
       case 'group':
         return this.getGroupChildren(node);
       case 'server':
@@ -242,6 +294,26 @@ export class FtpTreeProvider
 
   private getRootNodes(): FtpTreeNode[] {
     const connections = this.connectionManager.getConnections();
+    const openedFileNodes: FtpTreeNode[] = this.shouldShowOpenedFiles() && this.getOpenRemoteFileUris().length > 0
+      ? [
+        {
+        nodeType: 'openedFiles',
+        label: vscode.l10n.t('Opened Files'),
+        connectionId: '',
+        remotePath: '',
+        },
+        ...this.getOpenedFileChildren(),
+      ]
+      : [];
+    const recentFileChildren = this.shouldShowOpenedFiles() ? this.getRecentFileChildren() : [];
+    const recentFileNodes: FtpTreeNode[] = recentFileChildren.length > 0
+      ? [{
+        nodeType: 'recentFiles',
+        label: vscode.l10n.t('Recent Files'),
+        connectionId: '',
+        remotePath: '',
+      }]
+      : [];
     const groups = [...new Set(
       connections
         .map((cfg) => cfg.group?.trim())
@@ -265,10 +337,12 @@ export class FtpTreeProvider
         remotePath: cfg.remotePath,
       }));
 
-    return [...groupNodes, ...ungrouped];
+    return [...openedFileNodes, ...recentFileNodes, ...groupNodes, ...ungrouped];
   }
 
   private getNodeId(node: FtpTreeNode): string {
+    if (node.nodeType === 'openedFiles') return 'opened-files';
+    if (node.nodeType === 'recentFiles') return 'recent-files';
     return `${node.connectionId}:${node.nodeType}:${this.normalizePath(node.remotePath)}`;
   }
 
@@ -287,6 +361,40 @@ export class FtpTreeProvider
         remotePath: cfg.remotePath,
         group,
       }));
+  }
+
+  private getOpenedFileChildren(): FtpTreeNode[] {
+    return this.uriStringsToFileNodes(this.getOpenRemoteFileUris(), 'openedFile');
+  }
+
+  private getRecentFileChildren(): FtpTreeNode[] {
+    const openUris = new Set(this.getOpenRemoteFileUris());
+    return this.uriStringsToFileNodes(
+      this.getRecentRemoteFileUris().filter((uriString) => !openUris.has(uriString)),
+      'recentFile',
+    );
+  }
+
+  private uriStringsToFileNodes(uriStrings: string[], nodeType: 'openedFile' | 'recentFile'): FtpTreeNode[] {
+    return uriStrings
+      .map((uriString): FtpTreeNode | undefined => {
+        try {
+          const uri = vscode.Uri.parse(uriString);
+          if (uri.scheme !== 'ftpmanager' || !uri.authority) return undefined;
+          const connection = this.connectionManager.getConnection(uri.authority);
+          const serverName = connection?.name ?? uri.authority;
+          return {
+            nodeType,
+            label: path.posix.basename(uri.path),
+            connectionId: uri.authority,
+            remotePath: uri.path,
+            description: `${serverName}${uri.path}`,
+          };
+        } catch {
+          return undefined;
+        }
+      })
+      .filter((node): node is FtpTreeNode => Boolean(node));
   }
 
   private async getServerChildren(node: FtpTreeNode): Promise<FtpTreeNode[]> {
@@ -464,7 +572,12 @@ export class FtpTreeProvider
     const uploadDir = target.remotePath;
     const total = localPaths.length;
 
-    const perms = await pickPermissions();
+    const defaultPermissions = this.connectionManager.getConnection(target.connectionId)?.defaultFilePermissions ?? '644';
+    const perms = await pickPermissions({
+      title: vscode.l10n.t('Select uploaded file permissions'),
+      defaultPermissions,
+      defaultLabel: vscode.l10n.t('Server default'),
+    });
 
     await vscode.window.withProgress(
       {

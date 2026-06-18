@@ -4,7 +4,7 @@ import { useConnectionStore } from '../stores/connection.js';
 import { postMessage } from '../vscode-api.js';
 
 export function useExtensionMessages(): void {
-  const { setConnections, setTestResult } = useConnectionStore();
+  const { setConnections, setTestResult, setViewLocation } = useConnectionStore();
 
   useEffect(() => {
     const handler = (event: MessageEvent<ExtensionMessage>) => {
@@ -12,6 +12,9 @@ export function useExtensionMessages(): void {
       switch (msg.type) {
         case 'stateSync':
           setConnections(msg.connections);
+          if (msg.viewLocation) {
+            setViewLocation(msg.viewLocation);
+          }
           break;
         case 'connectionTestResult':
           setTestResult({ success: msg.success, error: msg.error });
@@ -29,5 +32,5 @@ export function useExtensionMessages(): void {
     postMessage({ type: 'ready' });
 
     return () => window.removeEventListener('message', handler);
-  }, [setConnections, setTestResult]);
+  }, [setConnections, setTestResult, setViewLocation]);
 }
