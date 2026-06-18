@@ -8,6 +8,7 @@
   "command.disconnect": "Disconnect",
   "command.refresh": "Refresh",
   "command.reconnectOpenFiles": "Reconnect Open Files",
+  "command.revealOpenFiles": "Reveal Open Files",
   "command.uploadFile": "Upload File",
   "command.downloadFile": "Download",
   "command.downloadFolder": "Download Folder",

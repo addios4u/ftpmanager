@@ -7,6 +7,7 @@
   "command.connect": "接続",
   "command.disconnect": "切断",
   "command.refresh": "更新",
+  "command.revealOpenFiles": "開いているファイルを表示",
   "command.uploadFile": "ファイルをアップロード",
   "command.downloadFile": "ダウンロード",
   "command.downloadFolder": "フォルダーをダウンロード",

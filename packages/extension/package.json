@@ -81,6 +81,12 @@
         "category": "%category.ftpManager%"
       },
       {
+        "command": "ftpmanager.revealOpenFiles",
+        "title": "%command.revealOpenFiles%",
+        "icon": "$(target)",
+        "category": "%category.ftpManager%"
+      },
+      {
         "command": "ftpmanager.uploadFile",
         "title": "%command.uploadFile%",
         "icon": "$(cloud-upload)",
@@ -180,6 +186,11 @@
         },
         {
           "command": "ftpmanager.reconnectOpenFiles",
+          "when": "view == ftpmanager.servers",
+          "group": "navigation"
+        },
+        {
+          "command": "ftpmanager.revealOpenFiles",
           "when": "view == ftpmanager.servers",
           "group": "navigation"
         },

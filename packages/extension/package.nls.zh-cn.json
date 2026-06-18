@@ -7,6 +7,7 @@
   "command.connect": "连接",
   "command.disconnect": "断开连接",
   "command.refresh": "刷新",
+  "command.revealOpenFiles": "显示打开的文件",
   "command.uploadFile": "上传文件",
   "command.downloadFile": "下载",
   "command.downloadFolder": "下载文件夹",
