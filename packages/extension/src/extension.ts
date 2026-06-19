@@ -14,6 +14,7 @@ import { randomUUID } from 'crypto';
 import { getUniqueCopyName } from './utils/duplicate.js';
 import { collectPermissions } from './utils/permissions.js';
 import { pickPermissions } from './utils/pick-permissions.js';
+import { runtimeT } from './i18n.js';
 
 let connectionManager: ConnectionManager;
 let treeProvider: FtpTreeProvider;
@@ -86,6 +87,17 @@ function isDirtyRemoteDocument(uri: vscode.Uri): boolean {
     document.uri.toString() === uri.toString() &&
     document.isDirty
   ));
+}
+
+function getActiveRemoteConnectionId(): string | undefined {
+  const uri = vscode.window.activeTextEditor?.document.uri;
+  return uri?.scheme === 'ftpmanager' ? uri.authority : undefined;
+}
+
+function shouldHighlightActiveServer(): boolean {
+  return vscode.workspace
+    .getConfiguration('ftpmanager')
+    .get<boolean>('highlightActiveServer', true);
 }
 
 async function rememberOpenRemoteFiles(context: vscode.ExtensionContext): Promise<void> {
@@ -163,6 +175,26 @@ function getConfiguredTreeViewId(): string {
     .getConfiguration('ftpmanager')
     .get<string>('viewLocation', 'explorer');
   return viewLocation === 'activityBar' ? VIEW_IDS.ACTIVITY_SERVERS : VIEW_IDS.SERVERS;
+}
+
+function getEffectiveLanguage(): 'en' | 'fr' | 'ja' | 'ko' | 'zh-cn' {
+  const configuredLanguage = vscode.workspace
+    .getConfiguration('ftpmanager')
+    .get<string>('language', 'auto')
+    .toLowerCase();
+  const language = configuredLanguage === 'auto'
+    ? vscode.env.language.toLowerCase()
+    : configuredLanguage;
+
+  if (language.startsWith('fr')) return 'fr';
+  if (language.startsWith('ja')) return 'ja';
+  if (language.startsWith('ko')) return 'ko';
+  if (language === 'zh-cn' || language.startsWith('zh')) return 'zh-cn';
+  return 'en';
+}
+
+async function updateLanguageContext(): Promise<void> {
+  await vscode.commands.executeCommand('setContext', 'ftpmanager.effectiveLanguage', getEffectiveLanguage());
 }
 
 async function focusConfiguredTreeView(): Promise<void> {
@@ -407,6 +439,8 @@ async function revealOpenRemoteFiles(treeView: vscode.TreeView<FtpTreeNode>): Pr
 }
 
 export function activate(context: vscode.ExtensionContext): void {
+  void updateLanguageContext();
+
   connectionManager = new ConnectionManager(context);
   treeProvider = new FtpTreeProvider(
     connectionManager,
@@ -443,24 +477,37 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.window.registerFileDecorationProvider({
       onDidChangeFileDecorations: ftpServerDecorationEmitter.event,
       provideFileDecoration: (uri) => {
+        const activeConnectionId = shouldHighlightActiveServer()
+          ? getActiveRemoteConnectionId()
+          : undefined;
+
         if (uri.scheme === 'ftpmanager-server' && connectionManager.isConnected(uri.authority)) {
           return {
             color: new vscode.ThemeColor('terminal.ansiGreen'),
-            tooltip: vscode.l10n.t('Connected'),
+            tooltip: activeConnectionId && uri.authority === activeConnectionId
+              ? runtimeT('Active editor server')
+              : runtimeT('Connected'),
           };
         }
 
         if (uri.scheme === 'ftpmanager-tree' && getOpenRemoteFileUris().includes(getRemoteUriFromTreeUri(uri).toString())) {
           return {
             color: new vscode.ThemeColor('terminal.ansiCyan'),
-            tooltip: vscode.l10n.t('Open remote file'),
+            tooltip: runtimeT('Open remote file'),
+          };
+        }
+
+        if (activeConnectionId && uri.scheme === 'ftpmanager-tree' && uri.authority === activeConnectionId) {
+          return {
+            color: new vscode.ThemeColor('ftpmanager.activeServerForeground'),
+            tooltip: runtimeT('Active editor server'),
           };
         }
 
         if (uri.scheme === 'ftpmanager' && isDirtyRemoteDocument(uri)) {
           return {
             color: new vscode.ThemeColor('terminal.ansiRed'),
-            tooltip: vscode.l10n.t('Unsaved remote changes'),
+            tooltip: runtimeT('Unsaved remote changes'),
           };
         }
 
@@ -485,9 +532,20 @@ export function activate(context: vscode.ExtensionContext): void {
     treeProvider.refresh();
     ftpServerDecorationEmitter.fire(undefined);
   }));
+  context.subscriptions.push(vscode.window.onDidChangeActiveTextEditor(() => {
+    ftpServerDecorationEmitter.fire(undefined);
+  }));
   context.subscriptions.push(vscode.workspace.onDidChangeConfiguration((event) => {
-    if (event.affectsConfiguration('ftpmanager.viewLocation')) {
+    if (
+      event.affectsConfiguration('ftpmanager.viewLocation') ||
+      event.affectsConfiguration('ftpmanager.language') ||
+      event.affectsConfiguration('ftpmanager.highlightActiveServer')
+    ) {
+      if (event.affectsConfiguration('ftpmanager.language')) {
+        void updateLanguageContext();
+      }
       treeProvider.refresh();
+      ftpServerDecorationEmitter.fire(undefined);
     }
   }));
   context.subscriptions.push(vscode.workspace.onDidChangeTextDocument((event) => {
@@ -563,6 +621,27 @@ export function activate(context: vscode.ExtensionContext): void {
         treeProvider.refresh(node as Parameters<typeof treeProvider.refresh>[0]);
         await reopenRestoredFiles(context, id);
       });
+    }),
+
+    vscode.commands.registerCommand(COMMAND_IDS.RECONNECT, async (node) => {
+      const id = node
+        ? (node as { connectionId: string }).connectionId
+        : await pickServer(connectionManager, vscode.l10n.t('Select server to reconnect'));
+      if (!id) return;
+      const connection = connectionManager.getConnection(id);
+      const name = connection?.name ?? id;
+      await vscode.window.withProgress(
+        {
+          location: vscode.ProgressLocation.Notification,
+          title: vscode.l10n.t('Reconnecting "{0}"...', name),
+          cancellable: false,
+        },
+        async () => {
+          await connectionManager.reconnect(id);
+        },
+      );
+      treeProvider.refresh(node as Parameters<typeof treeProvider.refresh>[0]);
+      await reopenRestoredFiles(context, id);
     }),
 
     vscode.commands.registerCommand(COMMAND_IDS.DISCONNECT, async (node) => {
@@ -1084,6 +1163,34 @@ export function activate(context: vscode.ExtensionContext): void {
       vscode.window.showInformationMessage(`Uploaded to ${server.name}: ${remoteDest}`);
       treeProvider.refresh();
     }),
+  );
+
+  const localizedCommandAliases: Array<[string, string]> = [
+    ['ftpmanager.connect.fr', COMMAND_IDS.CONNECT],
+    ['ftpmanager.connect.ja', COMMAND_IDS.CONNECT],
+    ['ftpmanager.connect.ko', COMMAND_IDS.CONNECT],
+    ['ftpmanager.connect.zh-cn', COMMAND_IDS.CONNECT],
+    ['ftpmanager.disconnect.fr', COMMAND_IDS.DISCONNECT],
+    ['ftpmanager.disconnect.ja', COMMAND_IDS.DISCONNECT],
+    ['ftpmanager.disconnect.ko', COMMAND_IDS.DISCONNECT],
+    ['ftpmanager.disconnect.zh-cn', COMMAND_IDS.DISCONNECT],
+    ['ftpmanager.reconnect.fr', COMMAND_IDS.RECONNECT],
+    ['ftpmanager.reconnect.ja', COMMAND_IDS.RECONNECT],
+    ['ftpmanager.reconnect.ko', COMMAND_IDS.RECONNECT],
+    ['ftpmanager.reconnect.zh-cn', COMMAND_IDS.RECONNECT],
+    ['ftpmanager.refresh.fr', COMMAND_IDS.REFRESH],
+    ['ftpmanager.refresh.ja', COMMAND_IDS.REFRESH],
+    ['ftpmanager.refresh.ko', COMMAND_IDS.REFRESH],
+    ['ftpmanager.refresh.zh-cn', COMMAND_IDS.REFRESH],
+    ['ftpmanager.uploadFile.fr', COMMAND_IDS.UPLOAD_FILE],
+    ['ftpmanager.uploadFile.ja', COMMAND_IDS.UPLOAD_FILE],
+    ['ftpmanager.uploadFile.ko', COMMAND_IDS.UPLOAD_FILE],
+    ['ftpmanager.uploadFile.zh-cn', COMMAND_IDS.UPLOAD_FILE],
+  ];
+  context.subscriptions.push(
+    ...localizedCommandAliases.map(([alias, command]) => (
+      vscode.commands.registerCommand(alias, (...args: unknown[]) => vscode.commands.executeCommand(command, ...args))
+    )),
   );
 
   restoreRemoteFiles(context, getConfiguredTreeView());

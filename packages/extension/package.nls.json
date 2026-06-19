@@ -6,6 +6,7 @@
   "command.editServer": "Edit Server",
   "command.deleteServer": "Delete Server",
   "command.connect": "Connect",
+  "command.reconnect": "Reconnect",
   "command.disconnect": "Disconnect",
   "command.refresh": "Refresh",
   "command.reconnectOpenFiles": "Reconnect Open Files",

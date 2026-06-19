@@ -65,5 +65,9 @@
   "Enter 3 or 4 digits (e.g. 644, 0644)": "3~4자리 숫자 입력 (예: 644, 0644)",
   "Change Permissions": "권한 변경",
   "Failed to change permissions: {0}": "권한 변경 실패: {0}",
-  "Changed permissions of \"{0}\" to {1}": "\"{0}\"의 권한을 {1}(으)로 변경했습니다"
+  "Changed permissions of \"{0}\" to {1}": "\"{0}\"의 권한을 {1}(으)로 변경했습니다",
+  "Open remote file": "?? ?? ??",
+  "Opened Files": "?? ??",
+  "Recent Files": "?? ??",
+  "Unsaved remote changes": "???? ?? ?? ?? ??"
 }

@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { FtpConnectionInfo, ViewState } from '@ftpmanager/shared';
+import type { FtpConnectionInfo, FtpManagerLanguage, FtpManagerLanguageOption, ViewState } from '@ftpmanager/shared';
 
 interface TestResult {
   success: boolean;
@@ -9,6 +9,9 @@ interface TestResult {
 interface ConnectionStore {
   connections: FtpConnectionInfo[];
   viewLocation: 'explorer' | 'activityBar';
+  language: FtpManagerLanguage;
+  languageOptions: FtpManagerLanguageOption[];
+  vscodeLanguage: string;
   viewState: ViewState;
   testResult: TestResult | null;
   isTesting: boolean;
@@ -16,6 +19,9 @@ interface ConnectionStore {
 
   setConnections: (connections: FtpConnectionInfo[]) => void;
   setViewLocation: (viewLocation: 'explorer' | 'activityBar') => void;
+  setLanguage: (language: FtpManagerLanguage) => void;
+  setLanguageOptions: (languageOptions: FtpManagerLanguageOption[]) => void;
+  setVscodeLanguage: (vscodeLanguage: string) => void;
   setViewState: (state: ViewState) => void;
   setTestResult: (result: TestResult | null) => void;
   setIsTesting: (v: boolean) => void;
@@ -25,6 +31,13 @@ interface ConnectionStore {
 export const useConnectionStore = create<ConnectionStore>((set) => ({
   connections: [],
   viewLocation: 'explorer',
+  language: 'auto',
+  languageOptions: [
+    { value: 'auto', label: 'Auto' },
+    { value: 'en', label: 'English' },
+    { value: 'fr', label: 'Français' },
+  ],
+  vscodeLanguage: 'en',
   viewState: { view: 'welcome' },
   testResult: null,
   isTesting: false,
@@ -32,6 +45,9 @@ export const useConnectionStore = create<ConnectionStore>((set) => ({
 
   setConnections: (connections) => set({ connections }),
   setViewLocation: (viewLocation) => set({ viewLocation }),
+  setLanguage: (language) => set({ language }),
+  setLanguageOptions: (languageOptions) => set({ languageOptions }),
+  setVscodeLanguage: (vscodeLanguage) => set({ vscodeLanguage }),
   setViewState: (viewState) => set({ viewState }),
   setTestResult: (testResult) => set({ testResult, isTesting: false }),
   setIsTesting: (isTesting) => set({ isTesting }),

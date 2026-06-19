@@ -4,7 +4,14 @@ import { useConnectionStore } from '../stores/connection.js';
 import { postMessage } from '../vscode-api.js';
 
 export function useExtensionMessages(): void {
-  const { setConnections, setTestResult, setViewLocation } = useConnectionStore();
+  const {
+    setConnections,
+    setLanguage,
+    setLanguageOptions,
+    setTestResult,
+    setViewLocation,
+    setVscodeLanguage,
+  } = useConnectionStore();
 
   useEffect(() => {
     const handler = (event: MessageEvent<ExtensionMessage>) => {
@@ -14,6 +21,15 @@ export function useExtensionMessages(): void {
           setConnections(msg.connections);
           if (msg.viewLocation) {
             setViewLocation(msg.viewLocation);
+          }
+          if (msg.language) {
+            setLanguage(msg.language);
+          }
+          if (msg.languageOptions) {
+            setLanguageOptions(msg.languageOptions);
+          }
+          if (msg.vscodeLanguage) {
+            setVscodeLanguage(msg.vscodeLanguage);
           }
           break;
         case 'connectionTestResult':
@@ -32,5 +48,5 @@ export function useExtensionMessages(): void {
     postMessage({ type: 'ready' });
 
     return () => window.removeEventListener('message', handler);
-  }, [setConnections, setTestResult, setViewLocation]);
+  }, [setConnections, setLanguage, setLanguageOptions, setTestResult, setViewLocation, setVscodeLanguage]);
 }

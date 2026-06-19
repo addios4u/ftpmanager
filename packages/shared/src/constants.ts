@@ -8,6 +8,7 @@ export const COMMAND_IDS = {
   EDIT_SERVER: 'ftpmanager.editServer',
   DELETE_SERVER: 'ftpmanager.deleteServer',
   CONNECT: 'ftpmanager.connect',
+  RECONNECT: 'ftpmanager.reconnect',
   DISCONNECT: 'ftpmanager.disconnect',
   REFRESH: 'ftpmanager.refresh',
   RECONNECT_OPEN_FILES: 'ftpmanager.reconnectOpenFiles',

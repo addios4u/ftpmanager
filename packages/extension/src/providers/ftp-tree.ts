@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import type { ConnectionManager } from '../services/connection-manager.js';
 import { pickPermissions } from '../utils/pick-permissions.js';
+import { runtimeT } from '../i18n.js';
 
 function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   return Promise.race([
@@ -10,6 +11,11 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
       setTimeout(() => reject(new Error(`Operation timed out after ${ms / 1000}s`)), ms),
     ),
   ]);
+}
+
+function isClosedConnectionError(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err);
+  return /client is closed|FIN packet|ECONNRESET|ETIMEDOUT|ENOTCONN|socket hang up|connection lost|No response from server/i.test(msg);
 }
 
 export type FtpNodeType =
@@ -175,7 +181,7 @@ export class FtpTreeProvider
       item.id = `${node.connectionId}-${gen}`;
       item.resourceUri = vscode.Uri.parse(`ftpmanager-server://${node.connectionId}/`);
       const connected = this.connectionManager.isConnected(node.connectionId);
-      item.description = connected ? vscode.l10n.t('Connected') : '';
+      item.description = connected ? runtimeT('Connected') : '';
     }
 
     if (node.nodeType === 'group') {
@@ -217,7 +223,7 @@ export class FtpTreeProvider
     if (node.nodeType === 'recentFile') {
       return {
         nodeType: 'recentFiles',
-        label: vscode.l10n.t('Recent Files'),
+        label: runtimeT('Recent Files'),
         connectionId: '',
         remotePath: '',
       };
@@ -298,7 +304,7 @@ export class FtpTreeProvider
       ? [
         {
         nodeType: 'openedFiles',
-        label: vscode.l10n.t('Opened Files'),
+        label: runtimeT('Opened Files'),
         connectionId: '',
         remotePath: '',
         },
@@ -309,7 +315,7 @@ export class FtpTreeProvider
     const recentFileNodes: FtpTreeNode[] = recentFileChildren.length > 0
       ? [{
         nodeType: 'recentFiles',
-        label: vscode.l10n.t('Recent Files'),
+        label: runtimeT('Recent Files'),
         connectionId: '',
         remotePath: '',
       }]
@@ -484,17 +490,14 @@ export class FtpTreeProvider
     remotePath: string,
     serverName: string,
   ): Promise<FtpTreeNode[]> {
-    const client = this.connectionManager.getClient(connectionId);
-    if (!client) return [];
-
     try {
-      const entries = await withTimeout(client.list(remotePath), 35_000);
+      const entries = await this.listRemoteEntries(connectionId, remotePath);
       return this.mapEntries(entries, connectionId, remotePath);
     } catch (err) {
       if (remotePath !== '/') {
         // Configured path failed — try root as fallback
         try {
-          const rootEntries = await withTimeout(client.list('/'), 35_000);
+          const rootEntries = await this.listRemoteEntries(connectionId, '/');
           vscode.window.showWarningMessage(
             vscode.l10n.t('Path "{0}" is unavailable for {1}. Showing root directory.', remotePath, serverName),
           );
@@ -511,6 +514,30 @@ export class FtpTreeProvider
         vscode.l10n.t('Failed to load directory: {0}', err instanceof Error ? err.message : String(err)),
       );
       return [];
+    }
+  }
+
+  private async listRemoteEntries(
+    connectionId: string,
+    remotePath: string,
+  ): Promise<import('@ftpmanager/shared').RemoteFileEntry[]> {
+    let client = this.connectionManager.getClient(connectionId);
+
+    if (!client && this.connectionManager.isConnected(connectionId)) {
+      await this.connectionManager.reconnect(connectionId);
+      client = this.connectionManager.getClient(connectionId);
+    }
+
+    if (!client) return [];
+
+    try {
+      return await withTimeout(client.list(remotePath), 35_000);
+    } catch (err) {
+      if (!isClosedConnectionError(err)) throw err;
+      await this.connectionManager.reconnect(connectionId);
+      client = this.connectionManager.getClient(connectionId);
+      if (!client) return [];
+      return withTimeout(client.list(remotePath), 35_000);
     }
   }
 
@@ -539,11 +566,8 @@ export class FtpTreeProvider
   }
 
   private async listDirectory(connectionId: string, remotePath: string): Promise<FtpTreeNode[]> {
-    const client = this.connectionManager.getClient(connectionId);
-    if (!client) return [];
-
     try {
-      const entries = await withTimeout(client.list(remotePath), 35_000);
+      const entries = await this.listRemoteEntries(connectionId, remotePath);
       return this.mapEntries(entries, connectionId, remotePath);
     } catch (err) {
       vscode.window.showErrorMessage(

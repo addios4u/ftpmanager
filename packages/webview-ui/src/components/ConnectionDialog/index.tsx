@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import type { FtpConnectionConfig, FtpProtocol } from '@ftpmanager/shared';
 import { DEFAULT_PORTS } from '@ftpmanager/shared';
+import { createTranslator } from '../../i18n.js';
 import { useConnectionStore } from '../../stores/connection.js';
 import { postMessage } from '../../vscode-api.js';
 import { randomUUID } from './uuid.js';
@@ -23,22 +24,30 @@ const emptyConfig = (): FtpConnectionConfig => ({
 });
 
 export function ConnectionDialog({ editId }: Props) {
-  const { connections, testResult, isTesting, setViewState, setTestResult, setIsTesting, pickedFiles } =
-    useConnectionStore();
+  const {
+    connections,
+    isTesting,
+    language,
+    pickedFiles,
+    setIsTesting,
+    setTestResult,
+    setViewState,
+    testResult,
+    vscodeLanguage,
+  } = useConnectionStore();
+  const t = createTranslator(language, vscodeLanguage);
 
   const existing = editId ? connections.find((c) => c.id === editId) : undefined;
   const [config, setConfig] = useState<FtpConnectionConfig>(existing ?? emptyConfig());
   const [password, setPassword] = useState('');
   const [passphrase, setPassphrase] = useState('');
 
-  // Sync picked private key file path
   useEffect(() => {
-    if (pickedFiles['privateKey']) {
-      setConfig((c) => ({ ...c, privateKeyPath: pickedFiles['privateKey'] }));
+    if (pickedFiles.privateKey) {
+      setConfig((c) => ({ ...c, privateKeyPath: pickedFiles.privateKey }));
     }
   }, [pickedFiles]);
 
-  // Update port when protocol changes
   const handleProtocolChange = (protocol: FtpProtocol) => {
     setConfig((c) => ({
       ...c,
@@ -62,15 +71,15 @@ export function ConnectionDialog({ editId }: Props) {
   return (
     <div className="connection-dialog">
       <div className="dialog-header">
-        <h1>{editId ? 'Edit Server' : 'Add Server'}</h1>
+        <h1>{editId ? t.editServer : t.addServerTitle}</h1>
         <button className="back-btn" onClick={() => setViewState({ view: 'welcome' })}>
-          ← Back
+          {t.back}
         </button>
       </div>
 
       <div className="form">
         <div className="form-group">
-          <label>Name</label>
+          <label>{t.name}</label>
           <input
             type="text"
             value={config.name}
@@ -80,7 +89,7 @@ export function ConnectionDialog({ editId }: Props) {
         </div>
 
         <div className="form-group">
-          <label>Protocol</label>
+          <label>{t.protocol}</label>
           <div className="protocol-selector">
             {(['ftp', 'ftps', 'sftp'] as FtpProtocol[]).map((p) => (
               <button
@@ -96,7 +105,7 @@ export function ConnectionDialog({ editId }: Props) {
 
         <div className="form-row">
           <div className="form-group flex-3">
-            <label>Host</label>
+            <label>{t.host}</label>
             <input
               type="text"
               value={config.host}
@@ -105,7 +114,7 @@ export function ConnectionDialog({ editId }: Props) {
             />
           </div>
           <div className="form-group flex-1">
-            <label>Port</label>
+            <label>{t.port}</label>
             <input
               type="number"
               value={config.port}
@@ -116,7 +125,7 @@ export function ConnectionDialog({ editId }: Props) {
 
         <div className="form-row">
           <div className="form-group flex-1">
-            <label>Username</label>
+            <label>{t.username}</label>
             <input
               type="text"
               value={config.username}
@@ -125,28 +134,28 @@ export function ConnectionDialog({ editId }: Props) {
             />
           </div>
           <div className="form-group flex-1">
-            <label>Password</label>
+            <label>{t.password}</label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder={editId ? '(unchanged)' : ''}
+              placeholder={editId ? t.unchanged : ''}
             />
           </div>
         </div>
 
         <div className="form-group">
-          <label>Remote Path</label>
+          <label>{t.remotePath}</label>
           <input
             type="text"
             value={config.remotePath}
             onChange={(e) => setConfig((c) => ({ ...c, remotePath: e.target.value }))}
-            placeholder="/public_html  (empty = home directory)"
+            placeholder={t.remotePathPlaceholder}
           />
         </div>
 
         <div className="form-group">
-          <label>Group</label>
+          <label>{t.group}</label>
           <input
             type="text"
             value={config.group ?? ''}
@@ -157,23 +166,23 @@ export function ConnectionDialog({ editId }: Props) {
 
         {(config.protocol === 'ftp' || config.protocol === 'ftps') && (
           <div className="form-group">
-            <label>Data Transfer Mode</label>
+            <label>{t.dataTransferMode}</label>
             <div className="protocol-selector">
               <button
                 className={`protocol-btn ${config.passiveMode !== false ? 'active' : ''}`}
                 onClick={() => setConfig((c) => ({ ...c, passiveMode: true }))}
               >
-                PASV (Passive)
+                {t.passive}
               </button>
               <button
                 className={`protocol-btn ${config.passiveMode === false ? 'active' : ''}`}
                 onClick={() => setConfig((c) => ({ ...c, passiveMode: false }))}
               >
-                EPSV (Extended Passive)
+                {t.extendedPassive}
               </button>
             </div>
             <small style={{ opacity: 0.7 }}>
-              PASV: most compatible. EPSV: try if PASV fails or file listing hangs.
+              {t.transferModeHelp}
             </small>
           </div>
         )}
@@ -185,18 +194,18 @@ export function ConnectionDialog({ editId }: Props) {
               checked={config.compareBeforeOverwrite === true}
               onChange={(e) => setConfig((c) => ({ ...c, compareBeforeOverwrite: e.target.checked || undefined }))}
             />
-            Ask to compare before overwrite
+            {t.compareBeforeOverwrite}
           </label>
           <small style={{ opacity: 0.7 }}>
-            When enabled, saving an existing remote file asks whether to overwrite, compare, or cancel.
+            {t.compareHelp}
           </small>
         </div>
 
         <div className="permissions-section">
-          <h3>Default Permissions</h3>
+          <h3>{t.defaultPermissions}</h3>
           <div className="form-row">
             <div className="form-group flex-1">
-              <label>Files</label>
+              <label>{t.files}</label>
               <input
                 type="text"
                 value={config.defaultFilePermissions ?? '644'}
@@ -206,7 +215,7 @@ export function ConnectionDialog({ editId }: Props) {
               />
             </div>
             <div className="form-group flex-1">
-              <label>Folders</label>
+              <label>{t.folders}</label>
               <input
                 type="text"
                 value={config.defaultFolderPermissions ?? '755'}
@@ -217,15 +226,15 @@ export function ConnectionDialog({ editId }: Props) {
             </div>
           </div>
           <small>
-            Used as the suggested chmod value for uploads and new folders. You can still choose another value each time.
+            {t.permissionsHelp}
           </small>
         </div>
 
         {config.protocol === 'sftp' && (
           <div className="sftp-section">
-            <h3>SSH Key Authentication (optional)</h3>
+            <h3>{t.sshKeyAuthentication}</h3>
             <div className="form-group">
-              <label>Private Key</label>
+              <label>{t.privateKey}</label>
               <div className="file-input-row">
                 <input
                   type="text"
@@ -234,17 +243,17 @@ export function ConnectionDialog({ editId }: Props) {
                   placeholder="~/.ssh/id_rsa"
                   readOnly
                 />
-                <button onClick={() => postMessage({ type: 'browsePrivateKey' })}>Browse...</button>
+                <button onClick={() => postMessage({ type: 'browsePrivateKey' })}>{t.browse}</button>
               </div>
             </div>
             {config.privateKeyPath && (
               <div className="form-group">
-                <label>Passphrase</label>
+                <label>{t.passphrase}</label>
                 <input
                   type="password"
                   value={passphrase}
                   onChange={(e) => setPassphrase(e.target.value)}
-                  placeholder="(if key is encrypted)"
+                  placeholder={t.encryptedKey}
                 />
               </div>
             )}
@@ -253,22 +262,22 @@ export function ConnectionDialog({ editId }: Props) {
 
         {testResult && (
           <div className={`test-result ${testResult.success ? 'success' : 'error'}`}>
-            {testResult.success ? '✓ Connection successful!' : `✗ ${testResult.error}`}
+            {testResult.success ? t.connectionSuccessful : testResult.error}
           </div>
         )}
 
         <div className="form-actions">
           <button onClick={handleTest} disabled={isTesting || !config.host.trim()}>
-            {isTesting ? 'Testing...' : 'Test Connection'}
+            {isTesting ? t.testing : t.testConnection}
           </button>
           <div className="spacer" />
-          <button onClick={() => setViewState({ view: 'welcome' })}>Cancel</button>
+          <button onClick={() => setViewState({ view: 'welcome' })}>{t.cancel}</button>
           <button
             className="primary"
             onClick={handleSave}
             disabled={!config.name.trim() || !config.host.trim()}
           >
-            Save
+            {t.save}
           </button>
         </div>
       </div>

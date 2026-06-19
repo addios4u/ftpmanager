@@ -1,7 +1,10 @@
 import * as vscode from 'vscode';
+import * as fs from 'fs';
+import * as path from 'path';
 import { randomUUID } from 'crypto';
 import { PASSWORD_KEY_PREFIX, PASSPHRASE_KEY_PREFIX } from '@ftpmanager/shared';
 import type { WebviewMessage } from '@ftpmanager/shared';
+import type { FtpManagerLanguage, FtpManagerLanguageOption } from '@ftpmanager/shared';
 import type { ConnectionManager } from '../services/connection-manager.js';
 import { FtpClient } from '../services/ftp-client.js';
 import { SftpClient } from '../services/sftp-client.js';
@@ -13,6 +16,15 @@ interface ConnectionsExportFile {
   exportedAt: string;
   connections: ExportedConnection[];
 }
+
+const LANGUAGE_LABELS: Record<FtpManagerLanguage, string> = {
+  auto: 'Auto',
+  en: 'English',
+  fr: 'Français',
+  ja: '日本語',
+  ko: '한국어',
+  'zh-cn': '简体中文',
+};
 
 export class WebviewPanelManager {
   private panel: vscode.WebviewPanel | undefined;
@@ -30,11 +42,56 @@ export class WebviewPanelManager {
     return configured === 'activityBar' ? 'activityBar' : 'explorer';
   }
 
+  private getLanguage(): FtpManagerLanguage {
+    const configured = vscode.workspace
+      .getConfiguration('ftpmanager')
+      .get<string>('language', 'auto');
+    return this.asSupportedLanguage(configured);
+  }
+
+  private asSupportedLanguage(language: string): FtpManagerLanguage {
+    return language === 'en' ||
+      language === 'fr' ||
+      language === 'ja' ||
+      language === 'ko' ||
+      language === 'zh-cn'
+      ? language
+      : 'auto';
+  }
+
+  private getLanguageOptions(): FtpManagerLanguageOption[] {
+    const detected = new Set<FtpManagerLanguage>(['auto', 'en']);
+    const extensionPath = this.context.extensionUri.fsPath;
+
+    for (const fileName of fs.readdirSync(extensionPath).filter((name) => name.startsWith('package.nls'))) {
+      const match = /^package\.nls\.([^.]+)\.json$/i.exec(fileName);
+      if (match) detected.add(this.asSupportedLanguage(match[1].toLowerCase()));
+    }
+
+    const l10nPath = path.join(extensionPath, 'l10n');
+    if (fs.existsSync(l10nPath)) {
+      for (const fileName of fs.readdirSync(l10nPath).filter((name) => name.startsWith('bundle.l10n'))) {
+        const match = /^bundle\.l10n\.([^.]+)\.json$/i.exec(fileName);
+        if (match) detected.add(this.asSupportedLanguage(match[1].toLowerCase()));
+      }
+    }
+
+    return [...detected]
+      .filter((language) => language !== 'auto' || detected.size > 1)
+      .map((language) => ({
+        value: language,
+        label: LANGUAGE_LABELS[language],
+      }));
+  }
+
   private postStateSync(): void {
     this.panel?.webview.postMessage({
       type: 'stateSync',
       connections: this.connectionManager.getConnectionInfos(),
       viewLocation: this.getViewLocation(),
+      language: this.getLanguage(),
+      languageOptions: this.getLanguageOptions(),
+      vscodeLanguage: vscode.env.language,
     });
   }
 
@@ -130,6 +187,14 @@ export class WebviewPanelManager {
             void vscode.commands.executeCommand('workbench.action.reloadWindow');
           }
         });
+        break;
+      }
+
+      case 'updateLanguage': {
+        await vscode.workspace
+          .getConfiguration('ftpmanager')
+          .update('language', msg.language, vscode.ConfigurationTarget.Global);
+        this.postStateSync();
         break;
       }
 

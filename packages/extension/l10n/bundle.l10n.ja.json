@@ -65,5 +65,9 @@
   "Enter 3 or 4 digits (e.g. 644, 0644)": "3〜4桁の数字を入力（例: 644, 0644）",
   "Change Permissions": "権限を変更",
   "Failed to change permissions: {0}": "権限の変更に失敗しました: {0}",
-  "Changed permissions of \"{0}\" to {1}": "\"{0}\"の権限を{1}に変更しました"
+  "Changed permissions of \"{0}\" to {1}": "\"{0}\"の権限を{1}に変更しました",
+  "Open remote file": "?????????????",
+  "Opened Files": "?????????",
+  "Recent Files": "?????????",
+  "Unsaved remote changes": "??????????"
 }

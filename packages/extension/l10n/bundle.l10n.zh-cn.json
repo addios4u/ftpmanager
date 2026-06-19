@@ -65,5 +65,9 @@
   "Enter 3 or 4 digits (e.g. 644, 0644)": "输入3或4位数字（如 644, 0644）",
   "Change Permissions": "更改权限",
   "Failed to change permissions: {0}": "更改权限失败：{0}",
-  "Changed permissions of \"{0}\" to {1}": "已将 \"{0}\" 的权限更改为 {1}"
+  "Changed permissions of \"{0}\" to {1}": "已将 \"{0}\" 的权限更改为 {1}",
+  "Open remote file": "???????",
+  "Opened Files": "?????",
+  "Recent Files": "????",
+  "Unsaved remote changes": "????????"
 }

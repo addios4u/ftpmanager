@@ -42,6 +42,24 @@
           ],
           "default": "explorer",
           "markdownDescription": "Controls where the FTPManager tree is shown. Use `explorer` to keep it in the Explorer panel, or `activityBar` to show it in its own Activity Bar view."
+        },
+        "ftpmanager.language": {
+          "type": "string",
+          "enum": [
+            "auto",
+            "en",
+            "fr",
+            "ja",
+            "ko",
+            "zh-cn"
+          ],
+          "default": "auto",
+          "markdownDescription": "Controls the language used by FTPManager. Use `auto` to follow the VS Code display language."
+        },
+        "ftpmanager.highlightActiveServer": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Highlights files and folders in the FTPManager tree that belong to the server of the active remote editor."
         }
       }
     },
@@ -91,6 +109,12 @@
         "command": "ftpmanager.connect",
         "title": "%command.connect%",
         "icon": "$(plug)",
+        "category": "%category.ftpManager%"
+      },
+      {
+        "command": "ftpmanager.reconnect",
+        "title": "%command.reconnect%",
+        "icon": "$(sync)",
         "category": "%category.ftpManager%"
       },
       {
@@ -193,6 +217,126 @@
         "title": "%command.searchFiles%",
         "icon": "$(search)",
         "category": "%category.ftpManager%"
+      },
+      {
+        "command": "ftpmanager.connect.fr",
+        "title": "Connecter",
+        "icon": "$(plug)",
+        "category": "%category.ftpManager%"
+      },
+      {
+        "command": "ftpmanager.disconnect.fr",
+        "title": "Déconnecter",
+        "icon": "$(debug-disconnect)",
+        "category": "%category.ftpManager%"
+      },
+      {
+        "command": "ftpmanager.reconnect.fr",
+        "title": "Reconnecter",
+        "icon": "$(sync)",
+        "category": "%category.ftpManager%"
+      },
+      {
+        "command": "ftpmanager.refresh.fr",
+        "title": "Rafraîchir",
+        "icon": "$(refresh)",
+        "category": "%category.ftpManager%"
+      },
+      {
+        "command": "ftpmanager.uploadFile.fr",
+        "title": "Uploader un fichier",
+        "icon": "$(cloud-upload)",
+        "category": "%category.ftpManager%"
+      },
+      {
+        "command": "ftpmanager.connect.ja",
+        "title": "接続",
+        "icon": "$(plug)",
+        "category": "%category.ftpManager%"
+      },
+      {
+        "command": "ftpmanager.disconnect.ja",
+        "title": "切断",
+        "icon": "$(debug-disconnect)",
+        "category": "%category.ftpManager%"
+      },
+      {
+        "command": "ftpmanager.reconnect.ja",
+        "title": "再接続",
+        "icon": "$(sync)",
+        "category": "%category.ftpManager%"
+      },
+      {
+        "command": "ftpmanager.refresh.ja",
+        "title": "更新",
+        "icon": "$(refresh)",
+        "category": "%category.ftpManager%"
+      },
+      {
+        "command": "ftpmanager.uploadFile.ja",
+        "title": "ファイルをアップロード",
+        "icon": "$(cloud-upload)",
+        "category": "%category.ftpManager%"
+      },
+      {
+        "command": "ftpmanager.connect.ko",
+        "title": "연결",
+        "icon": "$(plug)",
+        "category": "%category.ftpManager%"
+      },
+      {
+        "command": "ftpmanager.disconnect.ko",
+        "title": "연결 해제",
+        "icon": "$(debug-disconnect)",
+        "category": "%category.ftpManager%"
+      },
+      {
+        "command": "ftpmanager.reconnect.ko",
+        "title": "다시 연결",
+        "icon": "$(sync)",
+        "category": "%category.ftpManager%"
+      },
+      {
+        "command": "ftpmanager.refresh.ko",
+        "title": "새로고침",
+        "icon": "$(refresh)",
+        "category": "%category.ftpManager%"
+      },
+      {
+        "command": "ftpmanager.uploadFile.ko",
+        "title": "파일 업로드",
+        "icon": "$(cloud-upload)",
+        "category": "%category.ftpManager%"
+      },
+      {
+        "command": "ftpmanager.connect.zh-cn",
+        "title": "连接",
+        "icon": "$(plug)",
+        "category": "%category.ftpManager%"
+      },
+      {
+        "command": "ftpmanager.disconnect.zh-cn",
+        "title": "断开连接",
+        "icon": "$(debug-disconnect)",
+        "category": "%category.ftpManager%"
+      },
+      {
+        "command": "ftpmanager.reconnect.zh-cn",
+        "title": "重新连接",
+        "icon": "$(sync)",
+        "category": "%category.ftpManager%"
+      },
+      {
+        "command": "ftpmanager.refresh.zh-cn",
+        "title": "刷新",
+        "icon": "$(refresh)",
+        "category": "%category.ftpManager%"
+      },
+      {
+        "command": "ftpmanager.uploadFile.zh-cn",
+        "title": "上传文件",
+        "icon": "$(cloud-upload)",
+        "category": "%category.ftpManager%"
       }
     ],
     "keybindings": [
@@ -234,22 +378,127 @@
       "view/item/context": [
         {
           "command": "ftpmanager.connect",
-          "when": "(view == ftpmanager.servers || view == ftpmanager.activityServers) && viewItem == server-disconnected",
+          "when": "((view == ftpmanager.servers || view == ftpmanager.activityServers) && viewItem == server-disconnected) && ftpmanager.effectiveLanguage == 'en'",
+          "group": "inline"
+        },
+        {
+          "command": "ftpmanager.connect.fr",
+          "when": "((view == ftpmanager.servers || view == ftpmanager.activityServers) && viewItem == server-disconnected) && ftpmanager.effectiveLanguage == 'fr'",
+          "group": "inline"
+        },
+        {
+          "command": "ftpmanager.connect.ja",
+          "when": "((view == ftpmanager.servers || view == ftpmanager.activityServers) && viewItem == server-disconnected) && ftpmanager.effectiveLanguage == 'ja'",
+          "group": "inline"
+        },
+        {
+          "command": "ftpmanager.connect.ko",
+          "when": "((view == ftpmanager.servers || view == ftpmanager.activityServers) && viewItem == server-disconnected) && ftpmanager.effectiveLanguage == 'ko'",
+          "group": "inline"
+        },
+        {
+          "command": "ftpmanager.connect.zh-cn",
+          "when": "((view == ftpmanager.servers || view == ftpmanager.activityServers) && viewItem == server-disconnected) && ftpmanager.effectiveLanguage == 'zh-cn'",
           "group": "inline"
         },
         {
           "command": "ftpmanager.disconnect",
-          "when": "(view == ftpmanager.servers || view == ftpmanager.activityServers) && viewItem == server-connected",
+          "when": "((view == ftpmanager.servers || view == ftpmanager.activityServers) && viewItem == server-connected) && ftpmanager.effectiveLanguage == 'en'",
+          "group": "inline"
+        },
+        {
+          "command": "ftpmanager.disconnect.fr",
+          "when": "((view == ftpmanager.servers || view == ftpmanager.activityServers) && viewItem == server-connected) && ftpmanager.effectiveLanguage == 'fr'",
+          "group": "inline"
+        },
+        {
+          "command": "ftpmanager.disconnect.ja",
+          "when": "((view == ftpmanager.servers || view == ftpmanager.activityServers) && viewItem == server-connected) && ftpmanager.effectiveLanguage == 'ja'",
+          "group": "inline"
+        },
+        {
+          "command": "ftpmanager.disconnect.ko",
+          "when": "((view == ftpmanager.servers || view == ftpmanager.activityServers) && viewItem == server-connected) && ftpmanager.effectiveLanguage == 'ko'",
+          "group": "inline"
+        },
+        {
+          "command": "ftpmanager.disconnect.zh-cn",
+          "when": "((view == ftpmanager.servers || view == ftpmanager.activityServers) && viewItem == server-connected) && ftpmanager.effectiveLanguage == 'zh-cn'",
+          "group": "inline"
+        },
+        {
+          "command": "ftpmanager.reconnect",
+          "when": "((view == ftpmanager.servers || view == ftpmanager.activityServers) && viewItem == server-connected) && ftpmanager.effectiveLanguage == 'en'",
+          "group": "inline"
+        },
+        {
+          "command": "ftpmanager.reconnect.fr",
+          "when": "((view == ftpmanager.servers || view == ftpmanager.activityServers) && viewItem == server-connected) && ftpmanager.effectiveLanguage == 'fr'",
+          "group": "inline"
+        },
+        {
+          "command": "ftpmanager.reconnect.ja",
+          "when": "((view == ftpmanager.servers || view == ftpmanager.activityServers) && viewItem == server-connected) && ftpmanager.effectiveLanguage == 'ja'",
+          "group": "inline"
+        },
+        {
+          "command": "ftpmanager.reconnect.ko",
+          "when": "((view == ftpmanager.servers || view == ftpmanager.activityServers) && viewItem == server-connected) && ftpmanager.effectiveLanguage == 'ko'",
+          "group": "inline"
+        },
+        {
+          "command": "ftpmanager.reconnect.zh-cn",
+          "when": "((view == ftpmanager.servers || view == ftpmanager.activityServers) && viewItem == server-connected) && ftpmanager.effectiveLanguage == 'zh-cn'",
           "group": "inline"
         },
         {
           "command": "ftpmanager.refresh",
-          "when": "(view == ftpmanager.servers || view == ftpmanager.activityServers) && viewItem =~ /server-connected|directory/",
+          "when": "((view == ftpmanager.servers || view == ftpmanager.activityServers) && viewItem =~ /server-connected|directory/) && ftpmanager.effectiveLanguage == 'en'",
+          "group": "inline"
+        },
+        {
+          "command": "ftpmanager.refresh.fr",
+          "when": "((view == ftpmanager.servers || view == ftpmanager.activityServers) && viewItem =~ /server-connected|directory/) && ftpmanager.effectiveLanguage == 'fr'",
+          "group": "inline"
+        },
+        {
+          "command": "ftpmanager.refresh.ja",
+          "when": "((view == ftpmanager.servers || view == ftpmanager.activityServers) && viewItem =~ /server-connected|directory/) && ftpmanager.effectiveLanguage == 'ja'",
+          "group": "inline"
+        },
+        {
+          "command": "ftpmanager.refresh.ko",
+          "when": "((view == ftpmanager.servers || view == ftpmanager.activityServers) && viewItem =~ /server-connected|directory/) && ftpmanager.effectiveLanguage == 'ko'",
+          "group": "inline"
+        },
+        {
+          "command": "ftpmanager.refresh.zh-cn",
+          "when": "((view == ftpmanager.servers || view == ftpmanager.activityServers) && viewItem =~ /server-connected|directory/) && ftpmanager.effectiveLanguage == 'zh-cn'",
           "group": "inline"
         },
         {
           "command": "ftpmanager.uploadFile",
-          "when": "(view == ftpmanager.servers || view == ftpmanager.activityServers) && viewItem =~ /server-connected|directory/",
+          "when": "((view == ftpmanager.servers || view == ftpmanager.activityServers) && viewItem =~ /server-connected|directory/) && ftpmanager.effectiveLanguage == 'en'",
+          "group": "inline"
+        },
+        {
+          "command": "ftpmanager.uploadFile.fr",
+          "when": "((view == ftpmanager.servers || view == ftpmanager.activityServers) && viewItem =~ /server-connected|directory/) && ftpmanager.effectiveLanguage == 'fr'",
+          "group": "inline"
+        },
+        {
+          "command": "ftpmanager.uploadFile.ja",
+          "when": "((view == ftpmanager.servers || view == ftpmanager.activityServers) && viewItem =~ /server-connected|directory/) && ftpmanager.effectiveLanguage == 'ja'",
+          "group": "inline"
+        },
+        {
+          "command": "ftpmanager.uploadFile.ko",
+          "when": "((view == ftpmanager.servers || view == ftpmanager.activityServers) && viewItem =~ /server-connected|directory/) && ftpmanager.effectiveLanguage == 'ko'",
+          "group": "inline"
+        },
+        {
+          "command": "ftpmanager.uploadFile.zh-cn",
+          "when": "((view == ftpmanager.servers || view == ftpmanager.activityServers) && viewItem =~ /server-connected|directory/) && ftpmanager.effectiveLanguage == 'zh-cn'",
           "group": "inline"
         },
         {
@@ -264,17 +513,102 @@
         },
         {
           "command": "ftpmanager.connect",
-          "when": "(view == ftpmanager.servers || view == ftpmanager.activityServers) && viewItem == server-disconnected",
+          "when": "((view == ftpmanager.servers || view == ftpmanager.activityServers) && viewItem == server-disconnected) && ftpmanager.effectiveLanguage == 'en'",
+          "group": "1_server@0"
+        },
+        {
+          "command": "ftpmanager.connect.fr",
+          "when": "((view == ftpmanager.servers || view == ftpmanager.activityServers) && viewItem == server-disconnected) && ftpmanager.effectiveLanguage == 'fr'",
+          "group": "1_server@0"
+        },
+        {
+          "command": "ftpmanager.connect.ja",
+          "when": "((view == ftpmanager.servers || view == ftpmanager.activityServers) && viewItem == server-disconnected) && ftpmanager.effectiveLanguage == 'ja'",
+          "group": "1_server@0"
+        },
+        {
+          "command": "ftpmanager.connect.ko",
+          "when": "((view == ftpmanager.servers || view == ftpmanager.activityServers) && viewItem == server-disconnected) && ftpmanager.effectiveLanguage == 'ko'",
+          "group": "1_server@0"
+        },
+        {
+          "command": "ftpmanager.connect.zh-cn",
+          "when": "((view == ftpmanager.servers || view == ftpmanager.activityServers) && viewItem == server-disconnected) && ftpmanager.effectiveLanguage == 'zh-cn'",
           "group": "1_server@0"
         },
         {
           "command": "ftpmanager.disconnect",
-          "when": "(view == ftpmanager.servers || view == ftpmanager.activityServers) && viewItem == server-connected",
+          "when": "((view == ftpmanager.servers || view == ftpmanager.activityServers) && viewItem == server-connected) && ftpmanager.effectiveLanguage == 'en'",
           "group": "1_server@0"
         },
         {
+          "command": "ftpmanager.disconnect.fr",
+          "when": "((view == ftpmanager.servers || view == ftpmanager.activityServers) && viewItem == server-connected) && ftpmanager.effectiveLanguage == 'fr'",
+          "group": "1_server@0"
+        },
+        {
+          "command": "ftpmanager.disconnect.ja",
+          "when": "((view == ftpmanager.servers || view == ftpmanager.activityServers) && viewItem == server-connected) && ftpmanager.effectiveLanguage == 'ja'",
+          "group": "1_server@0"
+        },
+        {
+          "command": "ftpmanager.disconnect.ko",
+          "when": "((view == ftpmanager.servers || view == ftpmanager.activityServers) && viewItem == server-connected) && ftpmanager.effectiveLanguage == 'ko'",
+          "group": "1_server@0"
+        },
+        {
+          "command": "ftpmanager.disconnect.zh-cn",
+          "when": "((view == ftpmanager.servers || view == ftpmanager.activityServers) && viewItem == server-connected) && ftpmanager.effectiveLanguage == 'zh-cn'",
+          "group": "1_server@0"
+        },
+        {
+          "command": "ftpmanager.reconnect",
+          "when": "((view == ftpmanager.servers || view == ftpmanager.activityServers) && viewItem == server-connected) && ftpmanager.effectiveLanguage == 'en'",
+          "group": "1_server@0.5"
+        },
+        {
+          "command": "ftpmanager.reconnect.fr",
+          "when": "((view == ftpmanager.servers || view == ftpmanager.activityServers) && viewItem == server-connected) && ftpmanager.effectiveLanguage == 'fr'",
+          "group": "1_server@0.5"
+        },
+        {
+          "command": "ftpmanager.reconnect.ja",
+          "when": "((view == ftpmanager.servers || view == ftpmanager.activityServers) && viewItem == server-connected) && ftpmanager.effectiveLanguage == 'ja'",
+          "group": "1_server@0.5"
+        },
+        {
+          "command": "ftpmanager.reconnect.ko",
+          "when": "((view == ftpmanager.servers || view == ftpmanager.activityServers) && viewItem == server-connected) && ftpmanager.effectiveLanguage == 'ko'",
+          "group": "1_server@0.5"
+        },
+        {
+          "command": "ftpmanager.reconnect.zh-cn",
+          "when": "((view == ftpmanager.servers || view == ftpmanager.activityServers) && viewItem == server-connected) && ftpmanager.effectiveLanguage == 'zh-cn'",
+          "group": "1_server@0.5"
+        },
+        {
           "command": "ftpmanager.uploadFile",
-          "when": "(view == ftpmanager.servers || view == ftpmanager.activityServers) && viewItem =~ /server-connected|directory/",
+          "when": "((view == ftpmanager.servers || view == ftpmanager.activityServers) && viewItem =~ /server-connected|directory/) && ftpmanager.effectiveLanguage == 'en'",
+          "group": "2_transfer@1"
+        },
+        {
+          "command": "ftpmanager.uploadFile.fr",
+          "when": "((view == ftpmanager.servers || view == ftpmanager.activityServers) && viewItem =~ /server-connected|directory/) && ftpmanager.effectiveLanguage == 'fr'",
+          "group": "2_transfer@1"
+        },
+        {
+          "command": "ftpmanager.uploadFile.ja",
+          "when": "((view == ftpmanager.servers || view == ftpmanager.activityServers) && viewItem =~ /server-connected|directory/) && ftpmanager.effectiveLanguage == 'ja'",
+          "group": "2_transfer@1"
+        },
+        {
+          "command": "ftpmanager.uploadFile.ko",
+          "when": "((view == ftpmanager.servers || view == ftpmanager.activityServers) && viewItem =~ /server-connected|directory/) && ftpmanager.effectiveLanguage == 'ko'",
+          "group": "2_transfer@1"
+        },
+        {
+          "command": "ftpmanager.uploadFile.zh-cn",
+          "when": "((view == ftpmanager.servers || view == ftpmanager.activityServers) && viewItem =~ /server-connected|directory/) && ftpmanager.effectiveLanguage == 'zh-cn'",
           "group": "2_transfer@1"
         },
         {
@@ -333,8 +667,101 @@
           "command": "ftpmanager.uploadToServer",
           "group": "navigation@99"
         }
+      ],
+      "commandPalette": [
+        {
+          "command": "ftpmanager.connect.fr",
+          "when": "false"
+        },
+        {
+          "command": "ftpmanager.disconnect.fr",
+          "when": "false"
+        },
+        {
+          "command": "ftpmanager.reconnect.fr",
+          "when": "false"
+        },
+        {
+          "command": "ftpmanager.refresh.fr",
+          "when": "false"
+        },
+        {
+          "command": "ftpmanager.uploadFile.fr",
+          "when": "false"
+        },
+        {
+          "command": "ftpmanager.connect.ja",
+          "when": "false"
+        },
+        {
+          "command": "ftpmanager.disconnect.ja",
+          "when": "false"
+        },
+        {
+          "command": "ftpmanager.reconnect.ja",
+          "when": "false"
+        },
+        {
+          "command": "ftpmanager.refresh.ja",
+          "when": "false"
+        },
+        {
+          "command": "ftpmanager.uploadFile.ja",
+          "when": "false"
+        },
+        {
+          "command": "ftpmanager.connect.ko",
+          "when": "false"
+        },
+        {
+          "command": "ftpmanager.disconnect.ko",
+          "when": "false"
+        },
+        {
+          "command": "ftpmanager.reconnect.ko",
+          "when": "false"
+        },
+        {
+          "command": "ftpmanager.refresh.ko",
+          "when": "false"
+        },
+        {
+          "command": "ftpmanager.uploadFile.ko",
+          "when": "false"
+        },
+        {
+          "command": "ftpmanager.connect.zh-cn",
+          "when": "false"
+        },
+        {
+          "command": "ftpmanager.disconnect.zh-cn",
+          "when": "false"
+        },
+        {
+          "command": "ftpmanager.reconnect.zh-cn",
+          "when": "false"
+        },
+        {
+          "command": "ftpmanager.refresh.zh-cn",
+          "when": "false"
+        },
+        {
+          "command": "ftpmanager.uploadFile.zh-cn",
+          "when": "false"
+        }
       ]
-    }
+    },
+    "colors": [
+      {
+        "id": "ftpmanager.activeServerForeground",
+        "description": "Foreground color used for FTPManager tree items that belong to the server of the active remote editor.",
+        "defaults": {
+          "dark": "#D6E6FF",
+          "light": "#26324A",
+          "highContrast": "#FFFFFF"
+        }
+      }
+    ]
   },
   "scripts": {
     "build": "node esbuild.mjs --production",
@@ -369,7 +796,7 @@
     "onView:ftpmanager.activityServers",
     "onCommand:ftpmanager.openRemoteFile",
     "onCommand:ftpmanager.connect",
-    "onCommand:ftpmanager.addServer",
-    "onStartupFinished"
+    "onCommand:ftpmanager.reconnect",
+    "onCommand:ftpmanager.addServer"
   ]
 }
