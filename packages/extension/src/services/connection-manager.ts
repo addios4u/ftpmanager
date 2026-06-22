@@ -4,6 +4,7 @@ import { CONNECTIONS_KEY, PASSWORD_KEY_PREFIX, PASSPHRASE_KEY_PREFIX } from '@ft
 import type { IFtpClient } from './ftp-client.js';
 import { FtpClient } from './ftp-client.js';
 import { SftpClient } from './sftp-client.js';
+import { HostTrustStore, createHostKeyVerifier, type HostKeyVerifier } from './host-trust.js';
 
 export interface ExportedConnection {
   config: FtpConnectionConfig;
@@ -28,8 +29,13 @@ export class ConnectionManager {
   }>();
   readonly onDidChangeConnectionState = this._onDidChangeConnectionState.event;
 
+  private readonly hostTrust: HostTrustStore;
+  private readonly verifyHostKey: HostKeyVerifier;
+
   constructor(context: vscode.ExtensionContext) {
     this.context = context;
+    this.hostTrust = new HostTrustStore(context);
+    this.verifyHostKey = createHostKeyVerifier(this.hostTrust);
   }
 
   private isStaleConnectionError(err: unknown): boolean {
@@ -159,6 +165,7 @@ export class ConnectionManager {
     await this.context.globalState.update(CONNECTIONS_KEY, connections);
     await this.context.secrets.delete(PASSWORD_KEY_PREFIX + id);
     await this.context.secrets.delete(PASSPHRASE_KEY_PREFIX + id);
+    await this.hostTrust.remove(id);
     this._onDidChangeConnections.fire();
   }
 
@@ -218,8 +225,8 @@ export class ConnectionManager {
 
       const client: IFtpClient =
         config.protocol === 'sftp'
-          ? new SftpClient(config, password, passphrase)
-          : new FtpClient(config, password);
+          ? new SftpClient(config, password, passphrase, this.verifyHostKey)
+          : new FtpClient(config, password, this.verifyHostKey);
 
       try {
         await client.connect(signal);

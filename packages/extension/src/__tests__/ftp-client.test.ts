@@ -119,6 +119,56 @@ describe('FtpClient', () => {
         }),
       );
     });
+
+    it('should NOT verify a certificate for plain ftp even when a verifier is given', async () => {
+      const verify = vi.fn(async () => true);
+      const client = new FtpClient(makeConfig({ protocol: 'ftp' }), 'pw', verify);
+      await client.connect();
+      expect(verify).not.toHaveBeenCalled();
+    });
+
+    it('should accept a CA-trusted, hostname-matching ftps cert without prompting', async () => {
+      const verify = vi.fn(async () => true);
+      mockFtpClient.ftp.socket = {
+        authorized: true,
+        getPeerCertificate: () => ({
+          subject: { CN: 'ftp.example.com' },
+          subjectaltname: 'DNS:ftp.example.com',
+          fingerprint256: 'AA:BB:CC',
+        }),
+      };
+      const client = new FtpClient(makeConfig({ protocol: 'ftps' }), 'pw', verify);
+      await client.connect();
+      expect(verify).not.toHaveBeenCalled();
+      delete mockFtpClient.ftp.socket;
+    });
+
+    it('should pin a self-signed ftps cert via the verifier and reject when not trusted', async () => {
+      const verify = vi.fn(async () => false);
+      mockFtpClient.ftp.socket = {
+        authorized: false,
+        getPeerCertificate: () => ({ fingerprint256: 'AA:BB:CC:DD' }),
+      };
+      const client = new FtpClient(makeConfig({ protocol: 'ftps' }), 'pw', verify);
+      await expect(client.connect()).rejects.toThrow(/not trusted/i);
+      expect(verify).toHaveBeenCalledWith(
+        expect.objectContaining({ protocol: 'ftps', fingerprint: 'AA:BB:CC:DD' }),
+      );
+      expect(mockFtpClient.close).toHaveBeenCalled();
+      delete mockFtpClient.ftp.socket;
+    });
+
+    it('should accept a self-signed ftps cert when the verifier trusts it', async () => {
+      const verify = vi.fn(async () => true);
+      mockFtpClient.ftp.socket = {
+        authorized: false,
+        getPeerCertificate: () => ({ fingerprint256: 'AA:BB:CC:DD' }),
+      };
+      const client = new FtpClient(makeConfig({ protocol: 'ftps' }), 'pw', verify);
+      await client.connect();
+      expect(verify).toHaveBeenCalledOnce();
+      delete mockFtpClient.ftp.socket;
+    });
   });
 
   // ── disconnect() ───────────────────────────────────────────────────────────

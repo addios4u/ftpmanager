@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { createHash } from 'crypto';
 import type { FtpConnectionConfig } from '@ftpmanager/shared';
 import { Readable } from 'stream';
 
@@ -123,6 +124,44 @@ describe('SftpClient', () => {
       await client.connect();
       const callArg = mockSftpClient.connect.mock.calls[0][0] as Record<string, unknown>;
       expect(callArg).not.toHaveProperty('password');
+    });
+
+    it('should NOT set hostVerifier when no verifier is provided', async () => {
+      const client = new SftpClient(makeConfig(), 'pw');
+      await client.connect();
+      const opts = mockSftpClient.connect.mock.calls[0][0] as Record<string, unknown>;
+      expect(opts.hostVerifier).toBeUndefined();
+    });
+
+    it('should wire a hostVerifier that computes the SHA256 fingerprint and accepts on trust', async () => {
+      const verify = vi.fn(async () => true);
+      const client = new SftpClient(makeConfig(), 'pw', undefined, verify);
+      await client.connect();
+
+      const opts = mockSftpClient.connect.mock.calls[0][0] as {
+        hostVerifier: (key: Buffer, cb: (ok: boolean) => void) => void;
+      };
+      expect(typeof opts.hostVerifier).toBe('function');
+
+      const key = Buffer.from('raw-host-key-blob');
+      const accepted = await new Promise<boolean>((resolve) => opts.hostVerifier(key, resolve));
+
+      const expected = 'SHA256:' + createHash('sha256').update(key).digest('base64').replace(/=+$/, '');
+      expect(verify).toHaveBeenCalledWith(
+        expect.objectContaining({ connectionId: 'test-id', protocol: 'sftp', fingerprint: expected }),
+      );
+      expect(accepted).toBe(true);
+    });
+
+    it('should reject the SSH connection when the verifier returns false', async () => {
+      const verify = vi.fn(async () => false);
+      const client = new SftpClient(makeConfig(), 'pw', undefined, verify);
+      await client.connect();
+      const opts = mockSftpClient.connect.mock.calls[0][0] as {
+        hostVerifier: (key: Buffer, cb: (ok: boolean) => void) => void;
+      };
+      const accepted = await new Promise<boolean>((resolve) => opts.hostVerifier(Buffer.from('k'), resolve));
+      expect(accepted).toBe(false);
     });
   });
 

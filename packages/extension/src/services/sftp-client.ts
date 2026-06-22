@@ -1,8 +1,10 @@
+import { createHash } from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
 import SftpClientLib from 'ssh2-sftp-client';
 import type { FtpConnectionConfig, RemoteFileEntry } from '@ftpmanager/shared';
 import type { IFtpClient } from './ftp-client.js';
+import type { HostKeyVerifier } from './host-trust.js';
 
 /** "rwx" 형식 심볼릭 퍼미션 → 8진수 숫자 (0-7) */
 function rightsToOctal(rights: string): number {
@@ -16,6 +18,7 @@ export class SftpClient implements IFtpClient {
     private readonly config: FtpConnectionConfig,
     private readonly password?: string,
     private readonly passphrase?: string,
+    private readonly verifyHostKey?: HostKeyVerifier,
   ) {
     this.client = new SftpClientLib();
   }
@@ -29,6 +32,19 @@ export class SftpClient implements IFtpClient {
       keepaliveInterval: 25_000,  // send SSH keepalive every 25s to prevent idle disconnect
       keepaliveCountMax: 3,
     };
+
+    // TOFU host-key verification (ssh2 accepts ANY host key without this).
+    if (this.verifyHostKey) {
+      const verify = this.verifyHostKey;
+      const { id: connectionId, host, port } = this.config;
+      opts.hostVerifier = (key: Buffer, accept: (ok: boolean) => void): void => {
+        // OpenSSH-style fingerprint: base64(sha256(raw key blob)), padding stripped.
+        const fingerprint = 'SHA256:' + createHash('sha256').update(key).digest('base64').replace(/=+$/, '');
+        Promise.resolve(verify({ connectionId, host, port, protocol: 'sftp', fingerprint, algo: 'SSH host key' }))
+          .then((ok) => accept(ok))
+          .catch(() => accept(false));
+      };
+    }
 
     if (this.config.privateKeyPath) {
       opts.privateKey = await fs.promises.readFile(this.config.privateKeyPath);

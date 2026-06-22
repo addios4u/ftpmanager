@@ -6,6 +6,7 @@ import * as vscode from 'vscode';
 import { PassThrough, Readable } from 'stream';
 import { Client as BasicFtpClient, type FileInfo, type FTPContext, enterPassiveModeIPv6 } from 'basic-ftp';
 import type { FtpConnectionConfig, RemoteFileEntry } from '@ftpmanager/shared';
+import type { HostKeyVerifier } from './host-trust.js';
 
 export interface IFtpClient {
   connect(signal?: AbortSignal): Promise<void>;
@@ -112,6 +113,7 @@ export class FtpClient implements IFtpClient {
   constructor(
     private readonly config: FtpConnectionConfig,
     private readonly password?: string,
+    private readonly verifyHostKey?: HostKeyVerifier,
   ) {
     this.client = new BasicFtpClient();
     this.client.ftp.verbose = true;
@@ -162,13 +164,16 @@ export class FtpClient implements IFtpClient {
       this.client.prepareTransfer = (ftp) => enterPassiveModeIPv6(ftp);
     }
 
+    const isFtps = !!(this.config.protocol === 'ftps' || this.config.secure);
     const accessPromise = this.client.access({
       host: this.config.host,
       port: this.config.port,
       user: this.config.username,
       password: this.password,
-      secure: !!(this.config.protocol === 'ftps' || this.config.secure),
-      secureOptions: this.config.protocol === 'ftps' ? { rejectUnauthorized: false } : undefined,
+      secure: isFtps,
+      // FTPS certs are commonly self-signed; we let the handshake succeed and
+      // then pin the certificate ourselves via TOFU (see verifyControlCertificate).
+      secureOptions: isFtps ? { rejectUnauthorized: false } : undefined,
     });
     if (!signal) {
       await accessPromise;
@@ -180,7 +185,50 @@ export class FtpClient implements IFtpClient {
         ),
       ]);
     }
+    if (isFtps && this.verifyHostKey) {
+      await this.verifyControlCertificate();
+    }
     this.startKeepalive();
+  }
+
+  /**
+   * TOFU verification of the FTPS control-connection certificate. A publicly
+   * trusted chain that also matches the hostname is accepted silently;
+   * otherwise the certificate's SHA-256 fingerprint is pinned via the host
+   * verifier (prompting the user on first use or on change).
+   *
+   * Note: basic-ftp reuses these secure options for PASV data connections, so
+   * only the control connection's identity is pinned here.
+   */
+  private async verifyControlCertificate(): Promise<void> {
+    const socket = this.client.ftp.socket as unknown as Partial<tls.TLSSocket>;
+    if (!socket || typeof socket.getPeerCertificate !== 'function') {
+      this.client.close();
+      throw new Error('Unable to verify the FTPS server certificate (no TLS socket).');
+    }
+    const cert = socket.getPeerCertificate();
+    const hostnameError = cert && Object.keys(cert).length > 0
+      ? tls.checkServerIdentity(this.config.host, cert as tls.PeerCertificate)
+      : new Error('no certificate');
+    // Publicly trusted chain + matching hostname → no prompt needed.
+    if (socket.authorized === true && !hostnameError) return;
+
+    if (!cert || !cert.fingerprint256) {
+      this.client.close();
+      throw new Error('The FTPS server presented no certificate.');
+    }
+    const ok = await this.verifyHostKey!({
+      connectionId: this.config.id,
+      host: this.config.host,
+      port: this.config.port,
+      protocol: 'ftps',
+      fingerprint: cert.fingerprint256,
+      algo: 'Certificate (SHA-256)',
+    });
+    if (!ok) {
+      this.client.close();
+      throw new Error('FTPS server certificate was not trusted.');
+    }
   }
 
   async disconnect(): Promise<void> {
