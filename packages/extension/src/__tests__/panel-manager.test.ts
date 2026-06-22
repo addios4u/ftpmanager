@@ -21,6 +21,23 @@ vi.mock('../services/sftp-client.js', () => ({
   })),
 }));
 
+// getLanguageOptions() scans the (fake) extension dir for package.nls.*.json /
+// bundle.l10n.*.json files; mock fs so it doesn't hit the real filesystem.
+vi.mock('fs', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('fs')>();
+  return {
+    ...actual,
+    readdirSync: vi.fn(() => [
+      'package.nls.json',
+      'package.nls.fr.json',
+      'package.nls.ja.json',
+      'package.nls.ko.json',
+      'package.nls.zh-cn.json',
+    ]),
+    existsSync: vi.fn(() => false),
+  };
+});
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------

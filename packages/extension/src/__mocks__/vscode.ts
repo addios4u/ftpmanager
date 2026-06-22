@@ -63,6 +63,7 @@ export enum ProgressLocation {
 }
 
 export const env = {
+  language: 'en',
   clipboard: {
     writeText: vi.fn(),
     readText: vi.fn(async () => ''),
@@ -88,6 +89,9 @@ export const window = {
 export const workspace = {
   registerFileSystemProvider: vi.fn(),
   openTextDocument: vi.fn(),
+  getConfiguration: vi.fn((_section?: string) => ({
+    get: <T>(_key: string, defaultValue?: T): T | undefined => defaultValue,
+  })),
   fs: {
     readFile: vi.fn(),
     writeFile: vi.fn(),
