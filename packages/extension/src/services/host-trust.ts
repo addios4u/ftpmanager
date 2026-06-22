@@ -24,6 +24,13 @@ export interface HostKeyInfo {
   fingerprint: string;
   /** Algorithm/label shown to the user (e.g. "SSH host key", "Certificate (SHA-256)"). */
   algo?: string;
+  /**
+   * Whether a blocking modal prompt is acceptable. Defaults to interactive.
+   * Set false for automatic/background connects (e.g. keepalive reconnect) so an
+   * unknown or changed fingerprint fails closed instead of popping a modal the
+   * user didn't trigger.
+   */
+  interactive?: boolean;
 }
 
 interface TrustedEntry {
@@ -85,6 +92,13 @@ export function createHostKeyVerifier(store: HostTrustStore): HostKeyVerifier {
     // Known and unchanged → accept silently.
     if (sameEndpoint && stored!.fingerprint === info.fingerprint) {
       return true;
+    }
+
+    // Background/automatic connect (e.g. keepalive reconnect): never show a modal
+    // the user didn't initiate. Fail closed; the user can reconnect manually and
+    // get the prompt then.
+    if (info.interactive === false) {
+      return false;
     }
 
     const algoLabel = info.algo ?? (info.protocol === 'sftp' ? 'SSH host key' : 'Certificate');

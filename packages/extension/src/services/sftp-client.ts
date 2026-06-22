@@ -19,6 +19,8 @@ export class SftpClient implements IFtpClient {
     private readonly password?: string,
     private readonly passphrase?: string,
     private readonly verifyHostKey?: HostKeyVerifier,
+    /** false for automatic/background connects (e.g. keepalive) — suppresses modal trust prompts. */
+    private readonly interactive: boolean = true,
   ) {
     this.client = new SftpClientLib();
   }
@@ -28,7 +30,11 @@ export class SftpClient implements IFtpClient {
       host: this.config.host,
       port: this.config.port,
       username: this.config.username,
-      readyTimeout: 15_000,
+      // ssh2's readyTimeout spans the WHOLE handshake, including the (modal)
+      // host-key trust prompt, which runs mid-handshake via `hostVerifier`. A 15s
+      // window aborts the connection while the user is still reading the
+      // fingerprint, so give them room to respond when a verifier is present.
+      readyTimeout: this.verifyHostKey ? 120_000 : 15_000,
       keepaliveInterval: 25_000,  // send SSH keepalive every 25s to prevent idle disconnect
       keepaliveCountMax: 3,
     };
@@ -40,7 +46,7 @@ export class SftpClient implements IFtpClient {
       opts.hostVerifier = (key: Buffer, accept: (ok: boolean) => void): void => {
         // OpenSSH-style fingerprint: base64(sha256(raw key blob)), padding stripped.
         const fingerprint = 'SHA256:' + createHash('sha256').update(key).digest('base64').replace(/=+$/, '');
-        Promise.resolve(verify({ connectionId, host, port, protocol: 'sftp', fingerprint, algo: 'SSH host key' }))
+        Promise.resolve(verify({ connectionId, host, port, protocol: 'sftp', fingerprint, algo: 'SSH host key', interactive: this.interactive }))
           .then((ok) => accept(ok))
           .catch(() => accept(false));
       };

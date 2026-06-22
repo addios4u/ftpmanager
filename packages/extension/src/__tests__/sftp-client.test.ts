@@ -7,7 +7,7 @@ import { Readable } from 'stream';
 const mockSftpClient = {
   connect: vi.fn(),
   end: vi.fn(),
-  list: vi.fn(async () => []),
+  list: vi.fn(async (): Promise<unknown[]> => []),
   fastGet: vi.fn(),
   fastPut: vi.fn(),
   downloadDir: vi.fn(),
@@ -16,7 +16,7 @@ const mockSftpClient = {
   delete: vi.fn(),
   rmdir: vi.fn(),
   rename: vi.fn(),
-  get: vi.fn(async () => Buffer.from('content')),
+  get: vi.fn(async (): Promise<unknown> => Buffer.from('content')),
   put: vi.fn(),
   chmod: vi.fn(async () => 'ok'),
 };
@@ -131,6 +131,23 @@ describe('SftpClient', () => {
       await client.connect();
       const opts = mockSftpClient.connect.mock.calls[0][0] as Record<string, unknown>;
       expect(opts.hostVerifier).toBeUndefined();
+    });
+
+    it('uses the default 15s readyTimeout when no verifier is present', async () => {
+      const client = new SftpClient(makeConfig(), 'pw');
+      await client.connect();
+      const opts = mockSftpClient.connect.mock.calls[0][0] as Record<string, unknown>;
+      expect(opts.readyTimeout).toBe(15_000);
+    });
+
+    it('raises readyTimeout when a host-key verifier is present so the modal does not race the handshake timeout', async () => {
+      // Regression: ssh2's readyTimeout spans the whole handshake including the
+      // (modal) host-key prompt, so 15s aborted first connects mid-prompt.
+      const verify = vi.fn(async () => true);
+      const client = new SftpClient(makeConfig(), 'pw', undefined, verify);
+      await client.connect();
+      const opts = mockSftpClient.connect.mock.calls[0][0] as Record<string, unknown>;
+      expect(opts.readyTimeout as number).toBeGreaterThanOrEqual(60_000);
     });
 
     it('should wire a hostVerifier that computes the SHA256 fingerprint and accepts on trust', async () => {

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { FtpFileSystemProvider } from '../providers/ftp-fs-provider.js';
 import type { IFtpClient } from '../services/ftp-client.js';
 import type { ConnectionManager } from '../services/connection-manager.js';

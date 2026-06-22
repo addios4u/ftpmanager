@@ -173,6 +173,7 @@ export class ConnectionManager {
     id: string,
     signal?: AbortSignal,
     onRetry?: (attempt: number, maxAttempts: number, delayMs: number) => void,
+    interactive: boolean = true,
   ): Promise<void> {
     const existingConnect = this.connecting.get(id);
     if (existingConnect) {
@@ -181,7 +182,7 @@ export class ConnectionManager {
       return;
     }
 
-    const connectPromise = this.connectInternal(id, signal, onRetry);
+    const connectPromise = this.connectInternal(id, signal, onRetry, interactive);
     this.connecting.set(id, connectPromise);
     try {
       await connectPromise;
@@ -196,6 +197,7 @@ export class ConnectionManager {
     id: string,
     signal?: AbortSignal,
     onRetry?: (attempt: number, maxAttempts: number, delayMs: number) => void,
+    interactive: boolean = true,
   ): Promise<void> {
     const config = this.getConnection(id);
     if (!config) throw new Error(`Connection not found: ${id}`);
@@ -225,8 +227,8 @@ export class ConnectionManager {
 
       const client: IFtpClient =
         config.protocol === 'sftp'
-          ? new SftpClient(config, password, passphrase, this.verifyHostKey)
-          : new FtpClient(config, password, this.verifyHostKey);
+          ? new SftpClient(config, password, passphrase, this.verifyHostKey, interactive)
+          : new FtpClient(config, password, this.verifyHostKey, interactive);
 
       try {
         await client.connect(signal);
@@ -246,9 +248,12 @@ export class ConnectionManager {
     throw lastErr;
   }
 
-  async reconnect(id: string): Promise<void> {
-    await this.connecting.get(id).catch(() => {});
-    this.connecting.delete(id);
+  async reconnect(id: string, interactive: boolean = true): Promise<void> {
+    const inflight = this.connecting.get(id);
+    await inflight?.catch(() => {});
+    // Only clear the entry we actually awaited — a connect() that started during
+    // the await owns its own entry and cleans it up in its finally block.
+    if (this.connecting.get(id) === inflight) this.connecting.delete(id);
     this.stopKeepAlive(id);
     const client = this.clients.get(id);
     if (client) {
@@ -257,12 +262,13 @@ export class ConnectionManager {
     }
     this.connectedIds.delete(id);
     this._onDidChangeConnectionState.fire({ connectionId: id, connected: false });
-    await this.connect(id);
+    await this.connect(id, undefined, undefined, interactive);
   }
 
   async disconnect(id: string): Promise<void> {
-    await this.connecting.get(id).catch(() => {});
-    this.connecting.delete(id);
+    const inflight = this.connecting.get(id);
+    await inflight?.catch(() => {});
+    if (this.connecting.get(id) === inflight) this.connecting.delete(id);
     this.stopKeepAlive(id);
     const client = this.clients.get(id);
     if (client) {
@@ -302,7 +308,8 @@ export class ConnectionManager {
       if (!this.isStaleConnectionError(err) || !this.connectedIds.has(id)) return;
 
       try {
-        await this.reconnect(id);
+        // Background recovery — never pop a host-key modal the user didn't trigger.
+        await this.reconnect(id, false);
       } catch {
         const staleClient = this.clients.get(id);
         if (staleClient) {

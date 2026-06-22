@@ -114,8 +114,12 @@ export class FtpClient implements IFtpClient {
     private readonly config: FtpConnectionConfig,
     private readonly password?: string,
     private readonly verifyHostKey?: HostKeyVerifier,
+    /** false for automatic/background connects (e.g. keepalive) — suppresses modal trust prompts. */
+    private readonly interactive: boolean = true,
   ) {
-    this.client = new BasicFtpClient();
+    // basic-ftp's FTPContext.timeout is read-only in 5.3.x; set it via the
+    // constructor (30s control/data timeout — also the library default).
+    this.client = new BasicFtpClient(30_000);
     this.client.ftp.verbose = true;
     this.client.ftp.log = (msg: string) => getFtpChannel().appendLine(`[FTP] ${msg}`);
   }
@@ -153,8 +157,6 @@ export class FtpClient implements IFtpClient {
   }
 
   async connect(signal?: AbortSignal): Promise<void> {
-    this.client.ftp.timeout = 30_000; // 30s data connection timeout
-
     // passiveMode: true (default) → NAT-safe PASV (IPv4)
     // passiveMode: false           → EPSV (extended passive, no IP in response — no NAT issue)
     if (this.config.passiveMode !== false) {
@@ -224,6 +226,7 @@ export class FtpClient implements IFtpClient {
       protocol: 'ftps',
       fingerprint: cert.fingerprint256,
       algo: 'Certificate (SHA-256)',
+      interactive: this.interactive,
     });
     if (!ok) {
       this.client.close();

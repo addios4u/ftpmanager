@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.4.1] - 2026-06-22
+
+### Fixed
+- **Disconnect / Reconnect no longer crash** — disconnecting or reconnecting a connected server threw `TypeError: Cannot read properties of undefined (reading 'catch')`, leaving the tree stale and tabs open. This also broke the automatic keepalive reconnect. (Regression introduced in 1.4.0.)
+- **SFTP first connect no longer times out at the trust prompt** — ssh2's 15-second handshake timeout ran while the Trust-On-First-Use host-key dialog was open, so taking longer than 15s to confirm the fingerprint aborted the connection with a confusing "Timed out while waiting for handshake" error. The timeout is now extended while a trust prompt can appear.
+- **Concurrent reconnects no longer leak connections** — overlapping reconnect/connect calls for the same server could orphan a client and its keepalive timer; the in-flight connection is now tracked correctly.
+- **Settings dialog hardened** — the language-options lookup no longer crashes if the extension directory can't be read (remote/virtual workspaces).
+
+### Packaging
+- The published package now reliably includes the **README** (Marketplace overview) and **CHANGELOG**, which were missing from the 1.4.0 listing.
+
 ## [1.4.0] - 2026-06-22
 
 ### Added

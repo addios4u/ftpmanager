@@ -3,10 +3,10 @@ import type { FtpConnectionConfig } from '@ftpmanager/shared';
 
 // ── basic-ftp mock ────────────────────────────────────────────────────────────
 const mockFtpClient = {
-  ftp: { verbose: false },
+  ftp: { verbose: false } as { verbose: boolean; socket?: unknown; log?: (msg: string) => void },
   access: vi.fn(),
   close: vi.fn(),
-  list: vi.fn(async () => []),
+  list: vi.fn(async (): Promise<unknown[]> => []),
   downloadTo: vi.fn().mockResolvedValue(undefined),
   downloadToDir: vi.fn().mockResolvedValue(undefined),
   uploadFrom: vi.fn().mockResolvedValue(undefined),

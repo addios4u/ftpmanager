@@ -99,6 +99,28 @@ describe('createHostKeyVerifier', () => {
     expect(store.get('c1')).toMatchObject({ fingerprint: 'SHA256:NEW' });
   });
 
+  it('does NOT prompt for an unknown fingerprint on a non-interactive (background) connect', async () => {
+    const store = new HostTrustStore(makeContext());
+    const verify = createHostKeyVerifier(store);
+
+    const ok = await verify(info({ interactive: false }));
+
+    expect(ok).toBe(false);
+    expect(vscode.window.showWarningMessage).not.toHaveBeenCalled();
+    expect(store.get('c1')).toBeUndefined();
+  });
+
+  it('still silently accepts a known matching fingerprint on a non-interactive connect', async () => {
+    const store = new HostTrustStore(makeContext());
+    await store.set('c1', { host: 'example.com', port: 22, protocol: 'sftp', fingerprint: 'SHA256:AAA' });
+    const verify = createHostKeyVerifier(store);
+
+    const ok = await verify(info({ interactive: false }));
+
+    expect(ok).toBe(true);
+    expect(vscode.window.showWarningMessage).not.toHaveBeenCalled();
+  });
+
   it('re-prompts (TOFU) when the endpoint changed for the same connection id', async () => {
     const store = new HostTrustStore(makeContext());
     await store.set('c1', { host: 'old.example.com', port: 22, protocol: 'sftp', fingerprint: 'SHA256:AAA' });

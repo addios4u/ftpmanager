@@ -7,4 +7,5 @@ dist/
 *.d.ts.map
 .omc/
 packages/extension/README.md
+packages/extension/CHANGELOG.md
 

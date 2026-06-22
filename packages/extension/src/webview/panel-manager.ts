@@ -63,7 +63,15 @@ export class WebviewPanelManager {
     const detected = new Set<FtpManagerLanguage>(['auto', 'en']);
     const extensionPath = this.context.extensionUri.fsPath;
 
-    for (const fileName of fs.readdirSync(extensionPath).filter((name) => name.startsWith('package.nls'))) {
+    // extensionUri.fsPath is not guaranteed readable on remote/virtual hosts;
+    // never let a directory read crash the settings dialog state sync.
+    let rootEntries: string[] = [];
+    try {
+      rootEntries = fs.readdirSync(extensionPath);
+    } catch {
+      rootEntries = [];
+    }
+    for (const fileName of rootEntries.filter((name) => name.startsWith('package.nls'))) {
       const match = /^package\.nls\.([^.]+)\.json$/i.exec(fileName);
       if (match) detected.add(this.asSupportedLanguage(match[1].toLowerCase()));
     }

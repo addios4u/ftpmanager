@@ -122,4 +122,18 @@ describe('ConnectionManager', () => {
   it('getClient returns undefined for unconnected id', () => {
     expect(mgr.getClient('a1')).toBeUndefined();
   });
+
+  it('disconnect does not throw when there is no in-flight connect', async () => {
+    // Regression: disconnect() did `await this.connecting.get(id).catch(...)`,
+    // which throws a TypeError when the map has no entry (the normal case for an
+    // already-connected or never-connected server).
+    await expect(mgr.disconnect('a1')).resolves.toBeUndefined();
+  });
+
+  it('disconnect fires a disconnected state event for an unknown id without throwing', async () => {
+    const listener = vi.fn();
+    mgr.onDidChangeConnectionState(listener);
+    await mgr.disconnect('a1');
+    expect(listener).toHaveBeenCalledWith({ connectionId: 'a1', connected: false });
+  });
 });
