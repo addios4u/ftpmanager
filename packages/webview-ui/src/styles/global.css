@@ -65,6 +65,62 @@ button.danger {
   opacity: 0.65;
   font-size: 0.85em;
 }
+.security-warning {
+  padding: 8px 10px;
+  margin: -6px 0 16px;
+  border: 1px solid var(--vscode-inputValidation-warningBorder, rgba(255, 204, 0, 0.45));
+  border-radius: 4px;
+  background: var(--vscode-inputValidation-warningBackground, rgba(255, 204, 0, 0.08));
+  color: var(--vscode-inputValidation-warningForeground, var(--vscode-foreground));
+  font-size: 0.86em;
+}
+
+.view-location-setting {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px;
+  border: 1px solid var(--vscode-panel-border, rgba(128,128,128,0.2));
+  border-radius: 4px;
+  margin-bottom: 18px;
+}
+.view-location-setting h2 {
+  font-size: 1em;
+  margin: 0 0 4px;
+}
+.view-location-setting p {
+  margin: 0;
+  opacity: 0.65;
+  font-size: 0.85em;
+}
+.segmented-control {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  flex-shrink: 0;
+}
+.segmented-control button {
+  border-radius: 0;
+  border: 1px solid var(--vscode-button-border, transparent);
+  background: var(--vscode-button-secondaryBackground);
+  color: var(--vscode-button-secondaryForeground);
+}
+.segmented-control button:first-child {
+  border-radius: 4px 0 0 4px;
+}
+.segmented-control button:last-child {
+  border-radius: 0 4px 4px 0;
+}
+.segmented-control button.active {
+  background: var(--vscode-button-background);
+  color: var(--vscode-button-foreground);
+}
+.language-select {
+  width: auto;
+  min-width: 180px;
+  flex-shrink: 0;
+}
 
 .server-list { margin-bottom: 16px; }
 .server-item {
@@ -162,6 +218,18 @@ button.coffee-btn:hover { opacity: 0.85; }
   padding: 12px;
   border: 1px solid var(--vscode-panel-border, rgba(128,128,128,0.2));
   border-radius: 4px;
+}
+
+.permissions-section {
+  padding: 12px;
+  border: 1px solid var(--vscode-panel-border, rgba(128,128,128,0.2));
+  border-radius: 4px;
+}
+.permissions-section h3 {
+  margin-top: 0;
+}
+.permissions-section small {
+  opacity: 0.7;
 }
 
 .file-input-row { display: flex; gap: 6px; }

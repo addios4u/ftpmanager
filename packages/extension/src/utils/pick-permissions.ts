@@ -4,6 +4,12 @@ interface PermissionItem extends vscode.QuickPickItem {
   value: string | undefined;
 }
 
+interface PickPermissionsOptions {
+  title?: string;
+  defaultPermissions?: string;
+  defaultLabel?: string;
+}
+
 const PRESETS: PermissionItem[] = [
   {
     label: '644',
@@ -48,10 +54,21 @@ const PRESETS: PermissionItem[] = [
  * 권한 선택 QuickPick을 표시한다.
  * @returns 선택된 권한 문자열 (예: "644"), Skip/취소 시 undefined
  */
-export async function pickPermissions(): Promise<string | undefined> {
-  const picked = await vscode.window.showQuickPick(PRESETS, {
-    title: vscode.l10n.t('Select file permissions'),
-    placeHolder: vscode.l10n.t('Select file permissions'),
+export async function pickPermissions(options: PickPermissionsOptions = {}): Promise<string | undefined> {
+  const items = options.defaultPermissions
+    ? [
+      {
+        label: options.defaultPermissions,
+        description: options.defaultLabel ?? vscode.l10n.t('Server default'),
+        value: options.defaultPermissions,
+      },
+      ...PRESETS,
+    ]
+    : PRESETS;
+
+  const picked = await vscode.window.showQuickPick(items, {
+    title: options.title ?? vscode.l10n.t('Select file permissions'),
+    placeHolder: options.title ?? vscode.l10n.t('Select file permissions'),
     ignoreFocusOut: true,
   });
 

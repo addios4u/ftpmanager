@@ -54,5 +54,9 @@
   "Enter 3 or 4 digits (e.g. 644, 0644)": "Enter 3 or 4 digits (e.g. 644, 0644)",
   "Change Permissions": "Change Permissions",
   "Failed to change permissions: {0}": "Failed to change permissions: {0}",
-  "Changed permissions of \"{0}\" to {1}": "Changed permissions of \"{0}\" to {1}"
+  "Changed permissions of \"{0}\" to {1}": "Changed permissions of \"{0}\" to {1}",
+  "Open remote file": "Open remote file",
+  "Opened Files": "Opened Files",
+  "Recent Files": "Recent Files",
+  "Unsaved remote changes": "Unsaved remote changes"
 }

@@ -15,6 +15,9 @@ export class ConnectionManager {
   private readonly context: vscode.ExtensionContext;
   private readonly clients = new Map<string, IFtpClient>();
   private readonly connectedIds = new Set<string>();
+  private readonly connecting = new Map<string, Promise<void>>();
+  private readonly keepAliveTimers = new Map<string, ReturnType<typeof setInterval>>();
+  private readonly keepAliveRunningIds = new Set<string>();
 
   private readonly _onDidChangeConnections = new vscode.EventEmitter<void>();
   readonly onDidChangeConnections = this._onDidChangeConnections.event;
@@ -27,6 +30,11 @@ export class ConnectionManager {
 
   constructor(context: vscode.ExtensionContext) {
     this.context = context;
+  }
+
+  private isStaleConnectionError(err: unknown): boolean {
+    const msg = err instanceof Error ? err.message : String(err);
+    return /client is closed|FIN packet|ECONNRESET|ETIMEDOUT|ENOTCONN|socket hang up|connection lost|No response from server/i.test(msg);
   }
 
   getConnections(): FtpConnectionConfig[] {
@@ -159,9 +167,35 @@ export class ConnectionManager {
     signal?: AbortSignal,
     onRetry?: (attempt: number, maxAttempts: number, delayMs: number) => void,
   ): Promise<void> {
+    const existingConnect = this.connecting.get(id);
+    if (existingConnect) {
+      await existingConnect;
+      if (!this.keepAliveTimers.has(id)) this.startKeepAlive(id);
+      return;
+    }
+
+    const connectPromise = this.connectInternal(id, signal, onRetry);
+    this.connecting.set(id, connectPromise);
+    try {
+      await connectPromise;
+    } finally {
+      if (this.connecting.get(id) === connectPromise) {
+        this.connecting.delete(id);
+      }
+    }
+  }
+
+  private async connectInternal(
+    id: string,
+    signal?: AbortSignal,
+    onRetry?: (attempt: number, maxAttempts: number, delayMs: number) => void,
+  ): Promise<void> {
     const config = this.getConnection(id);
     if (!config) throw new Error(`Connection not found: ${id}`);
-    if (this.connectedIds.has(id)) return;
+    if (this.connectedIds.has(id)) {
+      if (!this.keepAliveTimers.has(id)) this.startKeepAlive(id);
+      return;
+    }
 
     const password = await this.context.secrets.get(PASSWORD_KEY_PREFIX + id);
     const passphrase = await this.context.secrets.get(PASSPHRASE_KEY_PREFIX + id);
@@ -192,6 +226,7 @@ export class ConnectionManager {
         if (signal?.aborted) return;
         this.clients.set(id, client);
         this.connectedIds.add(id);
+        this.startKeepAlive(id);
         this._onDidChangeConnectionState.fire({ connectionId: id, connected: true });
         return;
       } catch (err) {
@@ -205,6 +240,9 @@ export class ConnectionManager {
   }
 
   async reconnect(id: string): Promise<void> {
+    await this.connecting.get(id).catch(() => {});
+    this.connecting.delete(id);
+    this.stopKeepAlive(id);
     const client = this.clients.get(id);
     if (client) {
       try { await client.disconnect(); } catch { /* ignore */ }
@@ -216,6 +254,9 @@ export class ConnectionManager {
   }
 
   async disconnect(id: string): Promise<void> {
+    await this.connecting.get(id).catch(() => {});
+    this.connecting.delete(id);
+    this.stopKeepAlive(id);
     const client = this.clients.get(id);
     if (client) {
       await client.disconnect();
@@ -225,12 +266,61 @@ export class ConnectionManager {
     this._onDidChangeConnectionState.fire({ connectionId: id, connected: false });
   }
 
+  private startKeepAlive(id: string): void {
+    this.stopKeepAlive(id);
+    this.keepAliveTimers.set(id, setInterval(() => {
+      void this.runKeepAlive(id);
+    }, 60_000));
+  }
+
+  private stopKeepAlive(id: string): void {
+    const timer = this.keepAliveTimers.get(id);
+    if (timer) {
+      clearInterval(timer);
+      this.keepAliveTimers.delete(id);
+    }
+    this.keepAliveRunningIds.delete(id);
+  }
+
+  private async runKeepAlive(id: string): Promise<void> {
+    if (this.keepAliveRunningIds.has(id) || !this.connectedIds.has(id)) return;
+
+    const client = this.clients.get(id);
+    if (!client) return;
+
+    this.keepAliveRunningIds.add(id);
+    try {
+      await client.pwd();
+    } catch (err) {
+      if (!this.isStaleConnectionError(err) || !this.connectedIds.has(id)) return;
+
+      try {
+        await this.reconnect(id);
+      } catch {
+        const staleClient = this.clients.get(id);
+        if (staleClient) {
+          try { await staleClient.disconnect(); } catch { /* ignore */ }
+        }
+        this.clients.delete(id);
+        this.connectedIds.delete(id);
+        this.stopKeepAlive(id);
+        this._onDidChangeConnectionState.fire({ connectionId: id, connected: false });
+      }
+    } finally {
+      this.keepAliveRunningIds.delete(id);
+    }
+  }
+
   dispose(): void {
+    for (const id of [...this.keepAliveTimers.keys()]) {
+      this.stopKeepAlive(id);
+    }
     for (const [, client] of this.clients) {
       void client.disconnect();
     }
     this.clients.clear();
     this.connectedIds.clear();
+    this.connecting.clear();
     this._onDidChangeConnections.dispose();
     this._onDidChangeConnectionState.dispose();
   }

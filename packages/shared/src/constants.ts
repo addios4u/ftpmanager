@@ -1,5 +1,6 @@
 export const VIEW_IDS = {
   SERVERS: 'ftpmanager.servers',
+  ACTIVITY_SERVERS: 'ftpmanager.activityServers',
 } as const;
 
 export const COMMAND_IDS = {
@@ -7,9 +8,11 @@ export const COMMAND_IDS = {
   EDIT_SERVER: 'ftpmanager.editServer',
   DELETE_SERVER: 'ftpmanager.deleteServer',
   CONNECT: 'ftpmanager.connect',
+  RECONNECT: 'ftpmanager.reconnect',
   DISCONNECT: 'ftpmanager.disconnect',
   REFRESH: 'ftpmanager.refresh',
   RECONNECT_OPEN_FILES: 'ftpmanager.reconnectOpenFiles',
+  REVEAL_OPEN_FILES: 'ftpmanager.revealOpenFiles',
   UPLOAD_FILE: 'ftpmanager.uploadFile',
   DOWNLOAD_FILE: 'ftpmanager.downloadFile',
   DOWNLOAD_FOLDER: 'ftpmanager.downloadFolder',

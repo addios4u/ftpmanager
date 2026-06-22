@@ -1,30 +1,94 @@
 import React from 'react';
+import type { FtpManagerLanguage } from '@ftpmanager/shared';
+import { createTranslator } from '../../i18n.js';
 import { useConnectionStore } from '../../stores/connection.js';
 import { postMessage } from '../../vscode-api.js';
 
 export function WelcomeView() {
-  const { connections, setViewState } = useConnectionStore();
+  const {
+    connections,
+    language,
+    languageOptions,
+    setLanguage,
+    setViewState,
+    setViewLocation,
+    viewLocation,
+    vscodeLanguage,
+  } = useConnectionStore();
+  const t = createTranslator(language, vscodeLanguage);
+
+  const updateViewLocation = (nextLocation: 'explorer' | 'activityBar') => {
+    setViewLocation(nextLocation);
+    postMessage({ type: 'updateViewLocation', viewLocation: nextLocation });
+  };
+
+  const updateLanguage = (nextLanguage: FtpManagerLanguage) => {
+    setLanguage(nextLanguage);
+    postMessage({ type: 'updateLanguage', language: nextLanguage });
+  };
 
   return (
     <div className="welcome-view">
       <div className="welcome-header">
         <h1>FTP Manager</h1>
-        <p>Connect to remote servers via FTP, FTPS, or SFTP</p>
+        <p>{t.connectSubtitle}</p>
       </div>
 
       <div className="configuration-actions">
         <button onClick={() => postMessage({ type: 'importConnections' })}>
-          Import
+          {t.import}
         </button>
         <button onClick={() => postMessage({ type: 'exportConnections' })}>
-          Export
+          {t.export}
         </button>
-        <span>Exports include saved passwords.</span>
+      </div>
+      <div className="security-warning">
+        {t.securityWarning}
+      </div>
+
+      <div className="view-location-setting">
+        <div>
+          <h2>{t.viewLocation}</h2>
+          <p>{t.viewLocationDescription}</p>
+        </div>
+        <div className="segmented-control" role="group" aria-label="FTPManager view location">
+          <button
+            className={viewLocation === 'explorer' ? 'active' : ''}
+            onClick={() => updateViewLocation('explorer')}
+          >
+            {t.explorer}
+          </button>
+          <button
+            className={viewLocation === 'activityBar' ? 'active' : ''}
+            onClick={() => updateViewLocation('activityBar')}
+          >
+            {t.activityBar}
+          </button>
+        </div>
+      </div>
+
+      <div className="view-location-setting">
+        <div>
+          <h2>{t.language}</h2>
+          <p>{t.languageDescription}</p>
+        </div>
+        <select
+          className="language-select"
+          value={language}
+          onChange={(event) => updateLanguage(event.target.value as FtpManagerLanguage)}
+          aria-label="FTPManager language"
+        >
+          {languageOptions.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.value === 'auto' ? t.automatic : option.label}
+            </option>
+          ))}
+        </select>
       </div>
 
       {connections.length > 0 && (
         <div className="server-list">
-          <h2>Saved Servers</h2>
+          <h2>{t.savedServers}</h2>
           {connections.map((conn) => (
             <div key={conn.id} className="server-item">
               <span className={`protocol-badge ${conn.protocol}`}>{conn.protocol.toUpperCase()}</span>
@@ -34,13 +98,13 @@ export function WelcomeView() {
                 <button
                   onClick={() => setViewState({ view: 'connectionDialog', editId: conn.id })}
                 >
-                  Edit
+                  {t.edit}
                 </button>
                 <button
                   className="danger"
                   onClick={() => postMessage({ type: 'deleteConnection', connectionId: conn.id })}
                 >
-                  Delete
+                  {t.delete}
                 </button>
               </div>
             </div>
@@ -53,13 +117,13 @@ export function WelcomeView() {
           className="add-server-btn"
           onClick={() => setViewState({ view: 'connectionDialog' })}
         >
-          + Add Server
+          {t.addServer}
         </button>
         <button
           className="coffee-btn"
           onClick={() => postMessage({ type: 'openExternal', url: 'https://buymeacoffee.com/addios4u' })}
         >
-          ☕ Buy me a coffee
+          {t.buyMeACoffee}
         </button>
       </div>
     </div>

@@ -1,7 +1,10 @@
 import * as vscode from 'vscode';
+import * as fs from 'fs';
+import * as path from 'path';
 import { randomUUID } from 'crypto';
 import { PASSWORD_KEY_PREFIX, PASSPHRASE_KEY_PREFIX } from '@ftpmanager/shared';
 import type { WebviewMessage } from '@ftpmanager/shared';
+import type { FtpManagerLanguage, FtpManagerLanguageOption } from '@ftpmanager/shared';
 import type { ConnectionManager } from '../services/connection-manager.js';
 import { FtpClient } from '../services/ftp-client.js';
 import { SftpClient } from '../services/sftp-client.js';
@@ -14,6 +17,15 @@ interface ConnectionsExportFile {
   connections: ExportedConnection[];
 }
 
+const LANGUAGE_LABELS: Record<FtpManagerLanguage, string> = {
+  auto: 'Auto',
+  en: 'English',
+  fr: 'Français',
+  ja: '日本語',
+  ko: '한국어',
+  'zh-cn': '简体中文',
+};
+
 export class WebviewPanelManager {
   private panel: vscode.WebviewPanel | undefined;
   private pendingEditId: string | undefined;
@@ -23,13 +35,70 @@ export class WebviewPanelManager {
     private readonly connectionManager: ConnectionManager,
   ) {}
 
+  private getViewLocation(): 'explorer' | 'activityBar' {
+    const configured = vscode.workspace
+      .getConfiguration('ftpmanager')
+      .get<string>('viewLocation', 'explorer');
+    return configured === 'activityBar' ? 'activityBar' : 'explorer';
+  }
+
+  private getLanguage(): FtpManagerLanguage {
+    const configured = vscode.workspace
+      .getConfiguration('ftpmanager')
+      .get<string>('language', 'auto');
+    return this.asSupportedLanguage(configured);
+  }
+
+  private asSupportedLanguage(language: string): FtpManagerLanguage {
+    return language === 'en' ||
+      language === 'fr' ||
+      language === 'ja' ||
+      language === 'ko' ||
+      language === 'zh-cn'
+      ? language
+      : 'auto';
+  }
+
+  private getLanguageOptions(): FtpManagerLanguageOption[] {
+    const detected = new Set<FtpManagerLanguage>(['auto', 'en']);
+    const extensionPath = this.context.extensionUri.fsPath;
+
+    for (const fileName of fs.readdirSync(extensionPath).filter((name) => name.startsWith('package.nls'))) {
+      const match = /^package\.nls\.([^.]+)\.json$/i.exec(fileName);
+      if (match) detected.add(this.asSupportedLanguage(match[1].toLowerCase()));
+    }
+
+    const l10nPath = path.join(extensionPath, 'l10n');
+    if (fs.existsSync(l10nPath)) {
+      for (const fileName of fs.readdirSync(l10nPath).filter((name) => name.startsWith('bundle.l10n'))) {
+        const match = /^bundle\.l10n\.([^.]+)\.json$/i.exec(fileName);
+        if (match) detected.add(this.asSupportedLanguage(match[1].toLowerCase()));
+      }
+    }
+
+    return [...detected]
+      .filter((language) => language !== 'auto' || detected.size > 1)
+      .map((language) => ({
+        value: language,
+        label: LANGUAGE_LABELS[language],
+      }));
+  }
+
+  private postStateSync(): void {
+    this.panel?.webview.postMessage({
+      type: 'stateSync',
+      connections: this.connectionManager.getConnectionInfos(),
+      viewLocation: this.getViewLocation(),
+      language: this.getLanguage(),
+      languageOptions: this.getLanguageOptions(),
+      vscodeLanguage: vscode.env.language,
+    });
+  }
+
   openConnectionDialog(editId?: string): void {
     if (this.panel) {
       this.panel.reveal(vscode.ViewColumn.One);
-      this.panel.webview.postMessage({
-        type: 'stateSync',
-        connections: this.connectionManager.getConnectionInfos(),
-      });
+      this.postStateSync();
       if (editId) {
         this.panel.webview.postMessage({ type: 'openEdit', editId });
       }
@@ -75,10 +144,7 @@ export class WebviewPanelManager {
   private async handleMessage(msg: WebviewMessage): Promise<void> {
     switch (msg.type) {
       case 'ready': {
-        this.panel?.webview.postMessage({
-          type: 'stateSync',
-          connections: this.connectionManager.getConnectionInfos(),
-        });
+        this.postStateSync();
         if (this.pendingEditId) {
           this.panel?.webview.postMessage({ type: 'openEdit', editId: this.pendingEditId });
           this.pendingEditId = undefined;
@@ -88,19 +154,13 @@ export class WebviewPanelManager {
 
       case 'saveConnection': {
         await this.connectionManager.saveConnection(msg.config, msg.password, msg.passphrase);
-        this.panel?.webview.postMessage({
-          type: 'stateSync',
-          connections: this.connectionManager.getConnectionInfos(),
-        });
+        this.postStateSync();
         break;
       }
 
       case 'deleteConnection': {
         await this.connectionManager.deleteConnection(msg.connectionId);
-        this.panel?.webview.postMessage({
-          type: 'stateSync',
-          connections: this.connectionManager.getConnectionInfos(),
-        });
+        this.postStateSync();
         break;
       }
 
@@ -111,6 +171,30 @@ export class WebviewPanelManager {
 
       case 'importConnections': {
         await this.importConnections();
+        break;
+      }
+
+      case 'updateViewLocation': {
+        await vscode.workspace
+          .getConfiguration('ftpmanager')
+          .update('viewLocation', msg.viewLocation, vscode.ConfigurationTarget.Global);
+        this.postStateSync();
+        vscode.window.showInformationMessage(
+          'FTPManager view location updated. Reload the window if the Activity Bar does not update immediately.',
+          'Reload Window',
+        ).then((choice) => {
+          if (choice === 'Reload Window') {
+            void vscode.commands.executeCommand('workbench.action.reloadWindow');
+          }
+        });
+        break;
+      }
+
+      case 'updateLanguage': {
+        await vscode.workspace
+          .getConfiguration('ftpmanager')
+          .update('language', msg.language, vscode.ConfigurationTarget.Global);
+        this.postStateSync();
         break;
       }
 
@@ -164,6 +248,13 @@ export class WebviewPanelManager {
   }
 
   private async exportConnections(): Promise<void> {
+    const confirm = await vscode.window.showWarningMessage(
+      'FTPManager exports include saved passwords. Keep the exported JSON file private.',
+      { modal: true },
+      'Export Servers',
+    );
+    if (confirm !== 'Export Servers') return;
+
     const destination = await vscode.window.showSaveDialog({
       defaultUri: vscode.Uri.file('ftpmanager-servers.json'),
       saveLabel: 'Export Servers',
@@ -188,6 +279,13 @@ export class WebviewPanelManager {
   }
 
   private async importConnections(): Promise<void> {
+    const confirm = await vscode.window.showWarningMessage(
+      'Only import FTPManager server files you trust. Imported files can replace existing server settings and passwords.',
+      { modal: true },
+      'Import Servers',
+    );
+    if (confirm !== 'Import Servers') return;
+
     const files = await vscode.window.showOpenDialog({
       canSelectFiles: true,
       canSelectFolders: false,
@@ -208,10 +306,7 @@ export class WebviewPanelManager {
     }
 
     await this.connectionManager.importConnections(parsed.connections);
-    this.panel?.webview.postMessage({
-      type: 'stateSync',
-      connections: this.connectionManager.getConnectionInfos(),
-    });
+    this.postStateSync();
     vscode.window.showInformationMessage(`Imported ${parsed.connections.length} FTPManager server(s).`);
   }
 
