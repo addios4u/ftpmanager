@@ -66,8 +66,8 @@
   "Change Permissions": "権限を変更",
   "Failed to change permissions: {0}": "権限の変更に失敗しました: {0}",
   "Changed permissions of \"{0}\" to {1}": "\"{0}\"の権限を{1}に変更しました",
-  "Open remote file": "?????????????",
-  "Opened Files": "?????????",
-  "Recent Files": "?????????",
-  "Unsaved remote changes": "??????????"
+  "Open remote file": "開いているリモートファイル",
+  "Opened Files": "開いているファイル",
+  "Recent Files": "最近使ったファイル",
+  "Unsaved remote changes": "未保存のリモート変更"
 }

@@ -66,8 +66,8 @@
   "Change Permissions": "권한 변경",
   "Failed to change permissions: {0}": "권한 변경 실패: {0}",
   "Changed permissions of \"{0}\" to {1}": "\"{0}\"의 권한을 {1}(으)로 변경했습니다",
-  "Open remote file": "?? ?? ??",
-  "Opened Files": "?? ??",
-  "Recent Files": "?? ??",
-  "Unsaved remote changes": "???? ?? ?? ?? ??"
+  "Open remote file": "열린 원격 파일",
+  "Opened Files": "열린 파일",
+  "Recent Files": "최근 파일",
+  "Unsaved remote changes": "저장되지 않은 원격 변경 사항"
 }

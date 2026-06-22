@@ -74,8 +74,8 @@
   "Reconnected {0} FTPManager server(s).": "{0} serveur(s) FTPManager reconnecté(s).",
   "No open FTPManager files to reconnect.": "Aucun fichier FTPManager ouvert à reconnecter.",
   "No open FTPManager files to reveal.": "Aucun fichier FTPManager ouvert à afficher.",
-  "Recent Files": "Fichiers r?cents",
+  "Recent Files": "Fichiers récents",
   "Opened Files": "Fichiers ouverts",
   "Open remote file": "Fichier distant ouvert",
-  "Unsaved remote changes": "Modifications distantes non enregistr?es"
+  "Unsaved remote changes": "Modifications distantes non enregistrées"
 }
