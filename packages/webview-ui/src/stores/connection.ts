@@ -35,7 +35,7 @@ export const useConnectionStore = create<ConnectionStore>((set) => ({
   languageOptions: [
     { value: 'auto', label: 'Auto' },
     { value: 'en', label: 'English' },
-    { value: 'fr', label: 'Français' },
+    { value: 'fr', label: 'Fran\u00e7ais' },
   ],
   vscodeLanguage: 'en',
   viewState: { view: 'welcome' },

@@ -1,5 +1,5 @@
 import * as esbuild from 'esbuild';
-import { cpSync, readdirSync, realpathSync, rmSync, statSync } from 'fs';
+import { copyFileSync, mkdirSync, readdirSync, realpathSync, rmSync, statSync } from 'fs';
 import { createRequire } from 'module';
 import { dirname, join } from 'path';
 
@@ -27,6 +27,25 @@ const buildOptions = {
  * Copy external native modules AND transitive dependencies into dist/node_modules/.
  * pnpm places modules in a virtual store; we BFS to find all deps.
  */
+function copyRecursive(src, dest) {
+  const realSrc = realpathSync(src);
+  const stats = statSync(realSrc);
+  if (stats.isDirectory()) {
+    mkdirSync(dest, { recursive: true });
+    for (const entry of readdirSync(realSrc)) {
+      copyRecursive(join(realSrc, entry), join(dest, entry));
+    }
+    return;
+  }
+  mkdirSync(dirname(dest), { recursive: true });
+  copyFileSync(realSrc, dest);
+}
+
+function copyPackageDir(src, dest) {
+  rmSync(dest, { recursive: true, force: true });
+  copyRecursive(src, dest);
+}
+
 function copyNativeModules() {
   const require = createRequire(import.meta.url);
   const copied = new Set();
@@ -37,7 +56,7 @@ function copyNativeModules() {
     try {
       let modPath;
       try {
-        modPath = require.resolve(`${mod}/package.json`).replace('/package.json', '');
+        modPath = dirname(require.resolve(`${mod}/package.json`));
       } catch {
         modPath = dirname(require.resolve(mod));
       }
@@ -47,7 +66,7 @@ function copyNativeModules() {
       } else {
         const dest = `dist/node_modules/${mod}`;
         rmSync(dest, { recursive: true, force: true });
-        cpSync(modPath, dest, { recursive: true, dereference: true });
+        copyPackageDir(realpathSync(modPath), dest);
         copied.add(mod);
       }
     } catch { /* module not installed */ }
@@ -80,7 +99,7 @@ function copyNativeModules() {
       if (!copied.has(entry)) {
         const dest = `dist/node_modules/${entry}`;
         rmSync(dest, { recursive: true, force: true });
-        cpSync(entryPath, dest, { recursive: true, dereference: true });
+        copyPackageDir(realpathSync(entryPath), dest);
         copied.add(entry);
       }
       try {
