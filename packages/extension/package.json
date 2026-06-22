@@ -768,11 +768,11 @@
     "watch": "node esbuild.mjs --watch",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "prepackage": "pnpm run build && cp ../../README.md ./README.md",
-    "package": "vsce package --no-dependencies -o ../../out/",
-    "publish:vsce": "vsce publish --no-dependencies",
+    "prepackage": "pnpm run build && cp ../../README.md ./README.md && mkdir -p ../../out",
+    "package": "vsce package --no-dependencies -o \"../../out/ftpmanager-$npm_package_version.vsix\"",
+    "publish:vsce": "vsce publish --no-dependencies --packagePath \"../../out/ftpmanager-$npm_package_version.vsix\"",
     "publish:ovsx": "ovsx publish \"../../out/ftpmanager-$npm_package_version.vsix\"",
-    "publish:all": "pnpm run publish:vsce && pnpm run publish:ovsx",
+    "publish:all": "pnpm run package && pnpm run publish:vsce && pnpm run publish:ovsx",
     "vscode:prepublish": "pnpm run build"
   },
   "dependencies": {
