@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.4.0] - 2026-06-22
+
+### Added
+- **Server identity verification (TOFU)** — SFTP connections now verify the server's host key and FTPS connections verify the server's certificate, using a Trust-On-First-Use model. On the first connection you're shown the SHA-256 fingerprint and asked to trust it; a known, matching fingerprint connects silently, and a changed fingerprint raises a man-in-the-middle warning that requires explicit confirmation. Trusted fingerprints are stored per server and removed when the server is deleted. This closes a gap where SFTP previously accepted any host key and FTPS skipped certificate verification. (A publicly trusted, hostname-matching FTPS certificate is accepted without a prompt.)
+
+### Changed
+- **Updated `basic-ftp` to 5.3.1** — picks up fixes for HIGH-severity advisories (FTP command injection via CRLF and denial of service).
+
+### Fixed
+- **Localization encoding** — repaired corrupted (`?`) French/Japanese/Korean/Chinese values for the new tree strings (Recent Files, Opened Files, Open remote file, Unsaved remote changes) and translated the previously-English **Reconnect** / **Reconnect Open Files** commands in the Japanese, Korean, and Simplified Chinese manifests.
+
 ## [1.3.0] - 2026-06-03
 
 Big thanks to [@gendronsteph](https://github.com/gendronsteph) for contributing this feature set ([#3](https://github.com/addios4u/ftpmanager/pull/3)).
