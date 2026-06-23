@@ -20,10 +20,10 @@ interface ConnectionsExportFile {
 const LANGUAGE_LABELS: Record<FtpManagerLanguage, string> = {
   auto: 'Auto',
   en: 'English',
-  fr: 'Français',
-  ja: '日本語',
-  ko: '한국어',
-  'zh-cn': '简体中文',
+  fr: 'Fran\u00e7ais',
+  ja: '\u65e5\u672c\u8a9e',
+  ko: '\ud55c\uad6d\uc5b4',
+  'zh-cn': '\u7b80\u4f53\u4e2d\u6587',
 };
 
 export class WebviewPanelManager {
