@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.4.2] - 2026-06-23
+
+Thanks to [@gendronsteph](https://github.com/gendronsteph) for [#10](https://github.com/addios4u/ftpmanager/pull/10).
+
+### Fixed
+- **Configuration panel restored** — the published package was missing the webview build (`dist/webview/`), so the Configuration button opened an empty panel. The packaging step only built the extension bundle and never built the React webview. Packaging now builds the `shared` and `webview-ui` packages before the extension, so the VSIX again includes `dist/webview/webview.js` and `webview.css`. (Regression introduced in 1.4.0.)
+- **Encoding-safe localization** — French/Japanese/Korean/Chinese strings in the command manifest, `package.nls.*`, l10n bundles, and the configuration webview language labels are now stored as Unicode escapes, preventing mojibake across system locales. An `.editorconfig` keeps project files UTF-8.
+- **Windows packaging** — native-dependency copying in the esbuild step now resolves package paths safely and copies recursively, fixing VSIX packaging on Windows/pnpm.
+
 ## [1.4.1] - 2026-06-22
 
 ### Fixed
